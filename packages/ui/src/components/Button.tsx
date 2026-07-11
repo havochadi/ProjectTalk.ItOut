@@ -9,13 +9,13 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading, children, disabled, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center rounded-xl font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none hover:scale-[1.03] hover:shadow-md active:scale-[0.97]';
+    const baseStyles = 'inline-flex items-center justify-center rounded-full font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none hover:scale-[1.03] hover:shadow-md active:scale-[0.97]';
 
     const variants = {
-      primary: 'bg-gradient-to-r from-ti-primary-500 to-ti-primary-600 text-white hover:from-ti-primary-600 hover:to-ti-primary-700 focus-visible:ring-ti-primary-500 shadow-soft',
-      secondary: 'bg-white border-2 border-ti-beige-300 text-ti-ink-900 hover:bg-ti-beige-50 hover:border-ti-green-400',
-      ghost: 'text-ti-ink-800 hover:bg-ti-beige-100',
-      danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 focus-visible:ring-red-500 shadow-soft',
+      primary: 'bg-[#13111C] text-white hover:bg-[var(--primary-dark)] focus-visible:ring-[var(--primary)]',
+      secondary: 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-alt)]',
+      ghost: 'text-[var(--text)] hover:bg-[var(--surface-alt)]',
+      danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 focus-visible:ring-red-500',
     };
 
     const sizes = {

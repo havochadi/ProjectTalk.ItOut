@@ -23,7 +23,7 @@ TalkItOut is a full-stack web application designed to provide AI-powered support
     │         │          │         │
     ↓         ↓          ↓         ↓
 ┌────────┐ ┌──────┐ ┌──────────┐ ┌──────┐
-│MongoDB │ │Socket│ │  OpenAI  │ │ JWT  │
+│MongoDB │ │Socket│ │  Gemini  │ │ JWT  │
 │Database│ │  IO  │ │    API   │ │ Auth │
 └────────┘ └──────┘ └──────────┘ └──────┘
 ```
@@ -38,7 +38,6 @@ TalkItOut is a full-stack web application designed to provide AI-powered support
 - Responsive design with mobile-first approach
 - Dark mode by default for reduced eye strain
 - Framer Motion for smooth animations
-- Recharts for data visualization
 - Socket.IO client for realtime updates
 
 **Pages:**
@@ -63,7 +62,7 @@ TalkItOut is a full-stack web application designed to provide AI-powered support
 6. **Error Handler** - Centralized error handling
 
 **Key Services:**
-- **OpenAI Service** - AI text analysis and response generation
+- **AI Service** - Gemini-powered text analysis and response generation
 - **Socket Service** - Realtime event handling
 - **Auth Service** - Token generation and validation
 
@@ -89,7 +88,7 @@ TalkItOut is a full-stack web application designed to provide AI-powered support
 
 ### AI Integration
 
-**Provider:** OpenAI GPT-4o-mini
+**Provider:** Google Gemini (configured with `AI_MODEL`)
 
 **Functions:**
 1. **analyzeText()** - Sentiment analysis and risk detection
@@ -168,7 +167,7 @@ authenticate() → authorize(roles) → controller()
 - Secure WebSocket (wss://)
 
 **PII Handling:**
-- Pseudonymization before OpenAI API
+- Pseudonymization before the external AI API
 - PDPA/GDPR compliance
 - Data export and deletion endpoints
 
@@ -270,7 +269,7 @@ PM2 ecosystem.config.js
 **Required:**
 - `MONGO_URI` - Database connection
 - `JWT_SECRET` - Token signing key
-- `OPENAI_API_KEY` - AI API access
+- `GEMINI_API_KEY` - AI API access
 
 **Optional:**
 - `ALLOWED_ORIGINS` - CORS origins
@@ -287,7 +286,7 @@ PM2 ecosystem.config.js
 ### Integration Tests
 - API endpoints
 - Database operations
-- OpenAI service (mocked)
+- Gemini service (mocked)
 
 ### E2E Tests (Future)
 - User flows

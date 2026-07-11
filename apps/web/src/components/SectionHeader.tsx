@@ -18,7 +18,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
     <div className="flex items-start justify-between gap-4">
       <div className="flex items-center gap-3">
         {Icon && (
-          <div className="h-12 w-12 rounded-2xl bg-beige2/40 flex items-center justify-center text-brown1 shadow-soft">
+          <div className="h-12 w-12 rounded-2xl bg-wellness-sage-50 flex items-center justify-center text-wellness-sage-600 shadow-card">
             <Icon size={22} />
           </div>
         )}

@@ -64,8 +64,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       toast.success('Welcome back!');
 
       // Fetch profile
-      const profileRes = await userAPI.getMe();
-      setProfile(profileRes.data.profile);
+      try {
+        const profileRes = await userAPI.getMe();
+        setProfile(profileRes.data.profile);
+      } catch {
+        // Profile fetch failure is not critical, user is still logged in
+        setProfile(null);
+      }
     } catch (error: any) {
       const message = error.response?.data?.error || 'Login failed';
       toast.error(message);
@@ -85,8 +90,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       toast.success('Account created successfully!');
 
       // Fetch profile
-      const profileRes = await userAPI.getMe();
-      setProfile(profileRes.data.profile);
+      try {
+        const profileRes = await userAPI.getMe();
+        setProfile(profileRes.data.profile);
+      } catch {
+        setProfile(null);
+      }
     } catch (error: any) {
       const message = error.response?.data?.error || 'Registration failed';
       toast.error(message);

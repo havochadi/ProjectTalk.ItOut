@@ -23,7 +23,9 @@
     /* Paths */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@talkitout/ui": ["../../packages/ui/src/index.ts"],
+      "@talkitout/ui/*": ["../../packages/ui/src/*"]
     }
   },
   "include": ["src"],

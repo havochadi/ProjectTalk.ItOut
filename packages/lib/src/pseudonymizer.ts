@@ -1,6 +1,6 @@
 /**
  * Pseudonymization utilities for PDPA/GDPR compliance
- * Removes or masks PII before sending data to external services like OpenAI
+ * Removes or masks PII before sending data to external AI services
  */
 
 const EMAIL_REGEX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;

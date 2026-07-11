@@ -1,6 +1,8 @@
 import rateLimit from 'express-rate-limit';
 import { RATE_LIMITS } from '@talkitout/lib';
 
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 export const generalLimiter = rateLimit({
   windowMs: RATE_LIMITS.WINDOW_MS,
   max: RATE_LIMITS.MAX_REQUESTS,
@@ -23,7 +25,8 @@ export const aiLimiter = rateLimit({
 
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts
+  max: isDevelopment ? 50 : 5,
+  skipSuccessfulRequests: true,
   message: { error: 'Too many authentication attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,

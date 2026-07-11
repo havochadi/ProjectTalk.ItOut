@@ -37,7 +37,7 @@ jobs:
         env:
           MONGO_URI: mongodb://localhost:27017/talkitout-test
           JWT_SECRET: test-secret
-          OPENAI_API_KEY: test-key
+          GEMINI_API_KEY: test-key
 
   build:
     runs-on: ubuntu-latest

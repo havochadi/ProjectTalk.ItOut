@@ -340,7 +340,7 @@ export async function startBrowserRecognition(
 
   return new Promise((resolve, reject) => {
     try {
-      // @ts-ignore
+      // @ts-expect-error Browser speech-recognition types are not part of the standard DOM library.
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognition = new SpeechRecognition();
 
@@ -430,43 +430,129 @@ export function stopBrowserRecognition(): void {
   }
 }
 
+// Track current speech promise to prevent interruptions
+let currentSpeechPromise: Promise<void> | null = null;
+let currentUtterance: SpeechSynthesisUtterance | null = null;
+
 /**
  * Browser-based Text-to-Speech (Web Speech API)
  * Works without any API keys - completely free!
  */
 export async function speakWithBrowser(text: string): Promise<void> {
-  return new Promise((resolve, reject) => {
+  // If there's already speech in progress, cancel it first
+  if (currentSpeechPromise) {
+    window.speechSynthesis.cancel();
+    currentUtterance = null;
+    currentSpeechPromise = null;
+  }
+
+  currentSpeechPromise = new Promise((resolve, reject) => {
     if (!('speechSynthesis' in window)) {
       reject(new Error('Text-to-speech is not supported in this browser'));
       return;
     }
 
-    // Stop any current speech
+    // Stop any current speech and wait for it to fully stop
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Small delay to ensure cancellation completes
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      currentUtterance = utterance;
 
-    // Configure voice settings
-    utterance.rate = 1.0; // Speed (0.1 to 10)
-    utterance.pitch = 1.0; // Pitch (0 to 2)
-    utterance.volume = 1.0; // Volume (0 to 1)
+      // Configure voice settings
+      utterance.rate = 1.0; // Speed (0.1 to 10)
+      utterance.pitch = 1.0; // Pitch (0 to 2)
+      utterance.volume = 1.0; // Volume (0 to 1)
 
-    // Try to use a female English voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const femaleVoice = voices.find(voice =>
-      voice.lang.startsWith('en') && voice.name.toLowerCase().includes('female')
-    );
-    const englishVoice = voices.find(voice => voice.lang.startsWith('en'));
+      // Function to set voice once voices are loaded
+      const setVoice = () => {
+        const voices = window.speechSynthesis.getVoices();
 
-    if (femaleVoice) {
-      utterance.voice = femaleVoice;
-    } else if (englishVoice) {
-      utterance.voice = englishVoice;
-    }
+        if (voices.length === 0) {
+          console.warn('No voices available yet');
+          return;
+        }
 
-    utterance.onend = () => resolve();
-    utterance.onerror = (error) => reject(error);
+        // Try to use a female English voice if available
+        const femaleVoice = voices.find(voice =>
+          voice.lang.startsWith('en') && voice.name.toLowerCase().includes('female')
+        );
+        const englishVoice = voices.find(voice => voice.lang.startsWith('en'));
 
-    window.speechSynthesis.speak(utterance);
+        if (femaleVoice) {
+          utterance.voice = femaleVoice;
+        } else if (englishVoice) {
+          utterance.voice = englishVoice;
+        }
+      };
+
+      // Set voice immediately
+      setVoice();
+
+      // Also try to set voice when voices change (some browsers load voices asynchronously)
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.addEventListener('voiceschanged', setVoice, { once: true });
+      }
+
+      let hasEnded = false;
+
+      utterance.onend = () => {
+        if (!hasEnded) {
+          hasEnded = true;
+          currentUtterance = null;
+          currentSpeechPromise = null;
+          resolve();
+        }
+      };
+
+      utterance.onerror = (error) => {
+        console.error('Speech synthesis error:', error);
+
+        // Don't treat 'interrupted' as an error if we intentionally cancelled
+        if (error.error === 'interrupted') {
+          console.log('Speech was interrupted (expected behavior)');
+          currentUtterance = null;
+          currentSpeechPromise = null;
+          resolve(); // Resolve instead of reject for interruptions
+          return;
+        }
+
+        // Provide more specific error messages for real errors
+        if (error.error === 'not-allowed') {
+          reject(new Error('Speech synthesis not allowed. Please check browser permissions.'));
+        } else if (error.error === 'network') {
+          reject(new Error('Network error during speech synthesis. Some browsers require internet for TTS.'));
+        } else {
+          reject(new Error(`Speech synthesis failed: ${error.error || 'unknown error'}`));
+        }
+
+        currentUtterance = null;
+        currentSpeechPromise = null;
+      };
+
+      // Workaround for Chrome bug where speech doesn't start
+      utterance.onstart = () => {
+        console.log('Speech started');
+      };
+
+      try {
+        window.speechSynthesis.speak(utterance);
+
+        // Workaround for some browsers where speech doesn't start
+        // Resume speech synthesis to ensure it plays
+        setTimeout(() => {
+          if (window.speechSynthesis.paused && currentUtterance === utterance) {
+            window.speechSynthesis.resume();
+          }
+        }, 50);
+      } catch (error) {
+        currentUtterance = null;
+        currentSpeechPromise = null;
+        reject(error);
+      }
+    }, 150); // 150ms delay after cancel to ensure cleanup
   });
+
+  return currentSpeechPromise;
 }

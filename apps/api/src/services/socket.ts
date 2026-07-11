@@ -5,7 +5,10 @@ import { verifyToken } from '../middleware/auth';
 export function setupSocketIO(httpServer: HttpServer) {
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
+      origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+      ],
       credentials: true,
     },
   });
@@ -33,10 +36,17 @@ export function setupSocketIO(httpServer: HttpServer) {
 
   io.on('connection', (socket) => {
     const userId = socket.data.userId;
+    const userRole = socket.data.userRole;
     console.log(`User connected: ${userId}`);
 
     // Join user's personal room
     socket.join(`user:${userId}`);
+
+    // Join counselors room if user is a counselor
+    if (userRole === 'counselor' || userRole === 'admin') {
+      socket.join('counselors');
+      console.log(`Counselor connected to notifications: ${userId}`);
+    }
 
     // Pomodoro events
     socket.on('pomodoro:start', (data) => {
@@ -98,4 +108,8 @@ export function setupSocketIO(httpServer: HttpServer) {
 
 export function emitToUser(io: SocketIOServer, userId: string, event: string, data: any) {
   io.to(`user:${userId}`).emit(event, data);
+}
+
+export function emitToCounselors(io: SocketIOServer, event: string, data: any) {
+  io.to('counselors').emit(event, data);
 }

@@ -2,19 +2,22 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
+# Copy workspace manifests
+COPY package.json package-lock.json ./
 COPY packages/lib/package.json ./packages/lib/
+COPY packages/ui/package.json ./packages/ui/
 COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
 
-# Install dependencies
-RUN npm install --workspaces
+# Install only the workspaces needed by the API image
+RUN npm ci --workspace=@talkitout/lib --workspace=@talkitout/api --include-workspace-root
 
 # Copy source code
 COPY packages/lib ./packages/lib
 COPY apps/api ./apps/api
 
-# Build
+# Build lib first, then api
+RUN npm run build --workspace=@talkitout/lib
 RUN npm run build --workspace=@talkitout/api
 
 # Expose port

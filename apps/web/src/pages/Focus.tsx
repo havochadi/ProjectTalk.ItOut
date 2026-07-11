@@ -1,303 +1,247 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Button, Card, CardHeader, CardTitle, CardContent } from '@talkitout/ui';
+
 import { pomodoroAPI } from '../api/client';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { Timer, Coffee, Zap, Wind, BookOpen, Leaf } from 'lucide-react';
+
+const phaseConfig = {
+  focus:     { label: 'Focus time',   icon: Zap,    color: 'bg-wellness-sage-500',     ring: '#7B6CF6', emoji: '🎯' },
+  break:     { label: 'Short break',  icon: Coffee,  color: 'bg-wellness-sky-500',      ring: '#6BA3C4', emoji: '☕' },
+  longBreak: { label: 'Long break',   icon: Leaf,    color: 'bg-wellness-lavender-500', ring: '#B06FAD', emoji: '🌿' },
+};
+
+const mindfulActivities = [
+  { icon: Wind,     label: 'Box Breathing (4-4-4-4)',   desc: '4 s in · 4 s hold · 4 s out · 4 s hold' },
+  { icon: BookOpen, label: '5-4-3-2-1 Grounding',       desc: 'Name 5 things you can see' },
+  { icon: Leaf,     label: 'Progressive Muscle Relax',  desc: 'Tense & release each muscle group' },
+];
 
 export const FocusPage: React.FC = () => {
   const { profile } = useAuth();
   const { socket } = useSocket();
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [currentCycle, setCurrentCycle] = useState(0);
   const [sessionType, setSessionType] = useState<'focus' | 'break' | 'longBreak'>('focus');
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-  const preferences = profile?.preferences?.pomodoro || {
-    focusDuration: 25,
-    breakDuration: 5,
-    longBreakDuration: 15,
-    cyclesBeforeLongBreak: 4,
+  const prefs = profile?.preferences?.pomodoro || {
+    focusDuration: 25, breakDuration: 5, longBreakDuration: 15, cyclesBeforeLongBreak: 4,
   };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    if (isActive && !isPaused && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            handlePhaseComplete();
-            return 0;
-          }
-          return prev - 1;
-        });
-
-        // Emit tick event
-        if (socket) {
-          socket.emit('pomodoro:tick', { timeLeft: timeLeft - 1 });
-        }
-      }, 1000);
-    }
-
-    return () => clearInterval(interval);
+    if (!isActive || isPaused || timeLeft <= 0) return;
+    const id = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) { handlePhaseComplete(); return 0; }
+        return prev - 1;
+      });
+      socket?.emit('pomodoro:tick', { timeLeft: timeLeft - 1 });
+    }, 1000);
+    return () => clearInterval(id);
   }, [isActive, isPaused, timeLeft, socket]);
 
   const handleStart = async () => {
     try {
-      const response = await pomodoroAPI.start();
-      setSessionId(response.data._id);
+      const res = await pomodoroAPI.start();
+      setSessionId(res.data._id);
       setIsActive(true);
       setIsPaused(false);
       setSessionType('focus');
-      setTimeLeft(preferences.focusDuration * 60);
+      setTimeLeft(prefs.focusDuration * 60);
       setCurrentCycle(0);
-
-      if (socket) {
-        socket.emit('pomodoro:start', { sessionId: response.data._id });
-      }
-
+      socket?.emit('pomodoro:start', { sessionId: res.data._id });
       toast.success('Focus session started!');
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to start session');
-    }
+    } catch (e: any) { toast.error(e.response?.data?.error || 'Failed to start'); }
   };
 
   const handlePause = () => {
     setIsPaused(!isPaused);
-    if (socket) {
-      socket.emit(isPaused ? 'pomodoro:resume' : 'pomodoro:pause', {});
-    }
+    socket?.emit(isPaused ? 'pomodoro:resume' : 'pomodoro:pause', {});
   };
 
   const handleStop = async () => {
     if (!sessionId) return;
-
     try {
       await pomodoroAPI.stop(currentCycle);
-      setIsActive(false);
-      setIsPaused(false);
-      setSessionId(null);
-      setTimeLeft(preferences.focusDuration * 60);
-      setCurrentCycle(0);
-      setSessionType('focus');
-
-      if (socket) {
-        socket.emit('pomodoro:stop', { cyclesCompleted: currentCycle });
-      }
-
-      toast.success(`Great work! You completed ${currentCycle} cycle(s)`);
-    } catch (error) {
-      toast.error('Failed to stop session');
-    }
+      setIsActive(false); setIsPaused(false); setSessionId(null);
+      setTimeLeft(prefs.focusDuration * 60); setCurrentCycle(0); setSessionType('focus');
+      socket?.emit('pomodoro:stop', { cyclesCompleted: currentCycle });
+      toast.success(`Great work! ${currentCycle} cycle${currentCycle !== 1 ? 's' : ''} completed 🌟`);
+    } catch { toast.error('Failed to stop session'); }
   };
 
   const handlePhaseComplete = () => {
     if (sessionType === 'focus') {
-      const newCycle = currentCycle + 1;
-      setCurrentCycle(newCycle);
-
-      if (newCycle >= preferences.cyclesBeforeLongBreak) {
-        // Long break
-        setSessionType('longBreak');
-        setTimeLeft(preferences.longBreakDuration * 60);
-        toast.success('🎉 Time for a long break!');
+      const next = currentCycle + 1;
+      setCurrentCycle(next);
+      if (next >= prefs.cyclesBeforeLongBreak) {
+        setSessionType('longBreak'); setTimeLeft(prefs.longBreakDuration * 60);
+        toast.success('You earned a long break! 🌿', { icon: '🎉' });
       } else {
-        // Short break
-        setSessionType('break');
-        setTimeLeft(preferences.breakDuration * 60);
-        toast.success('Take a short break!');
+        setSessionType('break'); setTimeLeft(prefs.breakDuration * 60);
+        toast.success('Short break time ☕');
       }
     } else {
-      // Back to focus
       setSessionType('focus');
-      setTimeLeft(preferences.focusDuration * 60);
-      if (sessionType === 'longBreak') {
-        setCurrentCycle(0); // Reset after long break
-      }
-      toast.success('Ready for the next focus session?');
+      setTimeLeft(prefs.focusDuration * 60);
+      if (sessionType === 'longBreak') setCurrentCycle(0);
+      toast.success('Ready for the next focus session? 🎯');
     }
-
-    // Play notification sound (browser API)
-    new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBiV8yO/Xjj0KF2i76+2OPQ').play().catch(() => {});
   };
 
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  const fmt = (s: number) =>
+    `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
-  const totalTime = sessionType === 'focus'
-    ? preferences.focusDuration * 60
-    : sessionType === 'break'
-    ? preferences.breakDuration * 60
-    : preferences.longBreakDuration * 60;
+  const total =
+    sessionType === 'focus' ? prefs.focusDuration * 60 :
+    sessionType === 'break' ? prefs.breakDuration * 60 :
+    prefs.longBreakDuration * 60;
 
-  const progressPercent = ((totalTime - timeLeft) / totalTime) * 100;
+  const progress = (total - timeLeft) / total;
+  const r = 120;
+  const circ = 2 * Math.PI * r;
+  const phase = phaseConfig[sessionType];
+  const PhasIcon = phase.icon;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Welcome Message */}
+    <div className="mx-auto max-w-4xl space-y-8">
+      {/* Hero */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
+        className="text-center"
       >
-        <h2 className="text-2xl font-bold text-ti-ink-900 mb-3">
-          Take a moment for yourself 🧘
-        </h2>
-        <p className="text-lg text-ti-ink/70 max-w-2xl mx-auto">
-          When things feel busy, a little focused time can help. I'll be your timer—
-          you focus on what matters.
-        </p>
+        <h1 className="text-3xl font-bold text-text">Focus & Breathe</h1>
+        <p className="mt-2 text-muted">Structured focus helps calm the mind. Take it one session at a time.</p>
       </motion.div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid gap-6 md:grid-cols-3">
         {/* Timer */}
-        <div className="md:col-span-2">
-          <Card className="bg-gradient-to-br from-ti-green-500/5 to-white shadow-card">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <h2 className="text-xl font-semibold mb-2 capitalize text-ti-ink-900">
-                  {sessionType === 'focus' ? '🎯 Focus Time' : sessionType === 'break' ? '☕ Short Break' : '🌟 Long Break'}
-                </h2>
-                <p className="text-ti-ink/60 mb-8">
-                  Cycle {currentCycle + 1} of {preferences.cyclesBeforeLongBreak}
-                </p>
+        <div className="md:col-span-2 card-wellness p-8">
+          <div className="flex items-center gap-2 mb-6">
+            <div className={`flex h-8 w-8 items-center justify-center rounded-xl ${phase.color}`}>
+              <PhasIcon className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-widest text-muted">Phase</p>
+              <p className="text-sm font-bold text-text">{phase.emoji} {phase.label}</p>
+            </div>
+            <div className="ml-auto text-sm text-muted">
+              Cycle {currentCycle + 1} / {prefs.cyclesBeforeLongBreak}
+            </div>
+          </div>
 
-                {/* Breathing Circle */}
-                <motion.div
-                  animate={{
-                    scale: isActive && !isPaused && sessionType === 'focus' ? [1, 1.05, 1] : 1,
-                  }}
-                  transition={{
-                    duration: 4,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }}
-                  className="mx-auto mb-8 relative"
-                  style={{ width: 300, height: 300 }}
-                >
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-ti-beige-50 to-ti-green-500/10 shadow-lg" />
-                  <svg className="w-full h-full transform -rotate-90 relative z-10">
-                    <defs>
-                      <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#c9a375" />
-                        <stop offset="100%" stopColor="#a87b4e" />
-                      </linearGradient>
-                    </defs>
-                    <circle
-                      cx="150"
-                      cy="150"
-                      r="130"
-                      fill="none"
-                      stroke="#E6D7B1"
-                      strokeWidth="8"
-                    />
-                    <circle
-                      cx="150"
-                      cy="150"
-                      r="130"
-                      fill="none"
-                      stroke="url(#timerGradient)"
-                      strokeWidth="12"
-                      strokeDasharray={`${2 * Math.PI * 130}`}
-                      strokeDashoffset={`${2 * Math.PI * 130 * (1 - progressPercent / 100)}`}
-                      strokeLinecap="round"
-                      className="transition-all duration-1000"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-6xl font-extrabold text-ti-ink-900 mb-2">
-                        {formatTime(timeLeft)}
-                      </div>
-                      {isPaused && <div className="text-ti-ink/60 font-medium">Paused</div>}
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Controls */}
-                <div className="flex justify-center space-x-4">
-                  {!isActive ? (
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Button
-                        onClick={handleStart}
-                        size="lg"
-                        className="bg-gradient-to-r from-ti-green-500 to-ti-teal-500 text-white shadow-md hover:shadow-lg"
-                      >
-                        Start Focus Session
-                      </Button>
-                    </motion.div>
-                  ) : (
-                    <>
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button onClick={handlePause} variant="secondary">
-                          {isPaused ? 'Resume' : 'Pause'}
-                        </Button>
-                      </motion.div>
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button onClick={handleStop} variant="danger">
-                          End Session
-                        </Button>
-                      </motion.div>
-                    </>
-                  )}
-                </div>
+          {/* Circle timer */}
+          <div className="flex flex-col items-center">
+            <motion.div
+              animate={isActive && !isPaused && sessionType === 'focus'
+                ? { scale: [1, 1.015, 1] }
+                : { scale: 1 }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              className="relative mb-8"
+              style={{ width: 280, height: 280 }}
+            >
+              <svg className="h-full w-full -rotate-90" viewBox="0 0 280 280">
+                <defs>
+                  <linearGradient id="focusGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={phase.ring} />
+                    <stop offset="100%" stopColor={phase.ring} stopOpacity="0.6" />
+                  </linearGradient>
+                </defs>
+                {/* Track */}
+                <circle cx="140" cy="140" r={r} fill="none" stroke="var(--border)" strokeWidth="8" />
+                {/* Progress */}
+                <circle
+                  cx="140" cy="140" r={r}
+                  fill="none"
+                  stroke="url(#focusGrad)"
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  strokeDasharray={circ}
+                  strokeDashoffset={circ * (1 - progress)}
+                  className="transition-all duration-1000"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-5xl font-extrabold tracking-tight text-text">{fmt(timeLeft)}</span>
+                {isPaused && <span className="mt-1 text-sm font-medium text-muted">Paused</span>}
+                {!isActive && <span className="mt-1 text-sm text-muted">Ready to begin</span>}
               </div>
-            </CardContent>
-          </Card>
+            </motion.div>
+
+            {/* Controls */}
+            <div className="flex gap-3">
+              {!isActive ? (
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={handleStart}
+                  className="flex items-center gap-2 rounded-full bg-[#13111C] px-8 py-3 font-bold text-white transition hover:bg-wellness-sage-700"
+                >
+                  <Timer className="h-5 w-5" />
+                  Start session
+                </motion.button>
+              ) : (
+                <>
+                  <motion.button
+                    whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                    onClick={handlePause}
+                    className="rounded-2xl border border-border bg-surface px-6 py-3 font-semibold text-text transition hover:bg-surface-alt"
+                  >
+                    {isPaused ? 'Resume' : 'Pause'}
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                    onClick={handleStop}
+                    className="rounded-2xl border border-red-200 bg-red-50 px-6 py-3 font-semibold text-red-600 transition hover:bg-red-100"
+                  >
+                    End
+                  </motion.button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Info & Activities */}
-        <div className="space-y-6">
-          <Card className="bg-gradient-to-br from-ti-peach-100/30 to-white shadow-card">
-            <CardHeader>
-              <CardTitle className="text-ti-ink-900">⚙️ Your Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex justify-between p-2 bg-white rounded-lg">
-                <span className="text-ti-ink/70">Focus:</span>
-                <span className="font-semibold text-ti-ink-900">{preferences.focusDuration} min</span>
-              </div>
-              <div className="flex justify-between p-2 bg-white rounded-lg">
-                <span className="text-ti-ink/70">Break:</span>
-                <span className="font-semibold text-ti-ink-900">{preferences.breakDuration} min</span>
-              </div>
-              <div className="flex justify-between p-2 bg-white rounded-lg">
-                <span className="text-ti-ink/70">Long Break:</span>
-                <span className="font-semibold text-ti-ink-900">{preferences.longBreakDuration} min</span>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Sidebar */}
+        <div className="space-y-4">
+          {/* Settings */}
+          <div className="card-wellness p-5">
+            <p className="mb-3 text-sm font-bold text-text">Session settings</p>
+            <div className="space-y-2">
+              {[
+                { label: 'Focus', val: prefs.focusDuration },
+                { label: 'Break', val: prefs.breakDuration },
+                { label: 'Long break', val: prefs.longBreakDuration },
+              ].map(({ label, val }) => (
+                <div key={label} className="flex items-center justify-between rounded-xl border border-border bg-surface-alt px-3 py-2">
+                  <span className="text-xs text-muted">{label}</span>
+                  <span className="text-sm font-bold text-text">{val} min</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-          <Card className="bg-gradient-to-br from-ti-green-500/10 to-white shadow-card">
-            <CardHeader>
-              <CardTitle className="text-ti-ink-900">🌟 Quick Activities</CardTitle>
-              <p className="text-sm text-ti-ink/60 mt-1">Take a mindful break</p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <motion.div whileHover={{ scale: 1.02 }}>
-                <Button variant="secondary" size="sm" className="w-full justify-start text-left">
-                  🧘 Box Breathing (4-4-4-4)
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }}>
-                <Button variant="secondary" size="sm" className="w-full justify-start text-left">
-                  🖐️ 5-4-3-2-1 Grounding
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }}>
-                <Button variant="secondary" size="sm" className="w-full justify-start text-left">
-                  📝 Capture a Thought
-                </Button>
-              </motion.div>
-            </CardContent>
-          </Card>
+          {/* Mindful activities */}
+          <div className="card-wellness p-5">
+            <p className="mb-3 text-sm font-bold text-text">Mindful break ideas</p>
+            <div className="space-y-2">
+              {mindfulActivities.map(({ icon: Icon, label, desc }) => (
+                <div key={label} className="flex items-start gap-2.5 rounded-xl border border-border bg-surface-alt px-3 py-2.5">
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-wellness-sage-500" />
+                  <div>
+                    <p className="text-xs font-semibold text-text">{label}</p>
+                    <p className="text-[0.65rem] text-muted">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

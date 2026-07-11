@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import mongoose from 'mongoose';
 import { RiskFlag } from '../models/RiskFlag';
 import { Message } from '../models/Message';
 import { User } from '../models/User';
@@ -22,7 +23,13 @@ router.get(
 
       if (status) query.status = status;
       if (severity) query.severity = parseInt(severity as string);
-      if (userId) query.userId = userId;
+
+      const studentQuery: any = { role: USER_ROLES.STUDENT };
+      if (userId) {
+        studentQuery._id = userId;
+      }
+      const studentIds = await User.find(studentQuery).distinct('_id');
+      query.userId = { $in: studentIds };
 
       const flags = await RiskFlag.find(query)
         .populate('userId', 'name email age school')
@@ -51,6 +58,11 @@ router.get(
         .populate('messageId', 'text createdAt');
 
       if (!flag) {
+        throw new AppError(404, 'Risk flag not found');
+      }
+
+      const flagUser = await User.findById(flag.userId).select('role').lean();
+      if (!flagUser || flagUser.role !== USER_ROLES.STUDENT) {
         throw new AppError(404, 'Risk flag not found');
       }
 
@@ -83,18 +95,56 @@ router.patch(
   async (req: AuthRequest, res: Response, next) => {
     try {
       const { status, notes } = req.body;
+      const { id } = req.params;
 
-      const update: any = {};
-      if (status) {
-        update.status = status;
-        if (status === FLAG_STATUS.RESOLVED) {
-          update.resolvedAt = new Date();
+      if (!mongoose.isValidObjectId(id)) {
+        throw new AppError(400, 'Invalid risk flag id');
+      }
+
+      const normalizedStatus =
+        typeof status === 'string' ? status.trim().toLowerCase().replace(/[\s-]+/g, '_') : undefined;
+
+      if (normalizedStatus && !Object.values(FLAG_STATUS).includes(normalizedStatus as any)) {
+        throw new AppError(400, 'Invalid status value');
+      }
+
+      if (notes !== undefined && notes !== null && typeof notes !== 'string') {
+        throw new AppError(400, 'Notes must be a string');
+      }
+
+      const setUpdate: any = {};
+      const unsetUpdate: any = {};
+
+      if (normalizedStatus) {
+        setUpdate.status = normalizedStatus;
+        if (normalizedStatus === FLAG_STATUS.RESOLVED) {
+          setUpdate.resolvedAt = new Date();
+        } else {
+          unsetUpdate.resolvedAt = '';
         }
       }
-      if (notes !== undefined) update.notes = notes;
-      if (req.userId) update.reviewedBy = req.userId;
+      if (notes !== undefined) setUpdate.notes = notes;
+      if (req.userId) setUpdate.reviewedBy = req.userId;
 
-      const flag = await RiskFlag.findByIdAndUpdate(req.params.id, { $set: update }, { new: true })
+      if (Object.keys(setUpdate).length === 0 && Object.keys(unsetUpdate).length === 0) {
+        throw new AppError(400, 'No fields provided to update');
+      }
+
+      const updateDoc: any = {};
+      if (Object.keys(setUpdate).length > 0) updateDoc.$set = setUpdate;
+      if (Object.keys(unsetUpdate).length > 0) updateDoc.$unset = unsetUpdate;
+
+      const existingFlag = await RiskFlag.findById(id).select('userId').lean();
+      if (!existingFlag) {
+        throw new AppError(404, 'Risk flag not found');
+      }
+
+      const flagUser = await User.findById(existingFlag.userId).select('role').lean();
+      if (!flagUser || flagUser.role !== USER_ROLES.STUDENT) {
+        throw new AppError(404, 'Risk flag not found');
+      }
+
+      const flag = await RiskFlag.findByIdAndUpdate(id, updateDoc, { new: true, runValidators: true })
         .populate('userId', 'name email age school')
         .populate('reviewedBy', 'name');
 
@@ -118,6 +168,16 @@ router.delete(
   authorize(USER_ROLES.COUNSELOR, USER_ROLES.ADMIN),
   async (req: AuthRequest, res: Response, next) => {
     try {
+      const existingFlag = await RiskFlag.findById(req.params.id).select('userId').lean();
+      if (!existingFlag) {
+        throw new AppError(404, 'Risk flag not found');
+      }
+
+      const flagUser = await User.findById(existingFlag.userId).select('role').lean();
+      if (!flagUser || flagUser.role !== USER_ROLES.STUDENT) {
+        throw new AppError(404, 'Risk flag not found');
+      }
+
       const flag = await RiskFlag.findByIdAndDelete(req.params.id);
 
       if (!flag) {

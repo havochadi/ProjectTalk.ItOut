@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardHeader, CardTitle, CardContent, Badge } from '@talkitout/ui';
 import { riskAPI } from '../api/client';
 import toast from 'react-hot-toast';
-import { AlertTriangle, CheckCircle, Clock, ChevronRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, ChevronRight, ShieldAlert, Loader2 } from 'lucide-react';
+import { useSocket } from '../contexts/SocketContext';
 
 interface RiskFlag {
   _id: string;
-  userId: {
-    _id: string;
-    name: string;
-    email: string;
-  };
+  userId: { _id: string; name: string; email: string };
   messageId: string;
   tags: string[];
   severity: number;
@@ -31,339 +27,275 @@ interface GroupedStudent {
   resolvedCount: number;
 }
 
+const severityStyle = (s: number) =>
+  s >= 3 ? 'border-red-200 bg-red-50 text-red-700' :
+  s >= 2 ? 'border-wellness-peach-200 bg-wellness-peach-50 text-wellness-peach-700' :
+  'border-wellness-sage-200 bg-wellness-sage-50 text-wellness-sage-700';
+
+const severityLabel = (s: number) => s >= 3 ? 'High' : s >= 2 ? 'Medium' : 'Low';
+
+const statusIcon = (s: string) =>
+  s === 'resolved' ? <CheckCircle className="h-4 w-4" /> :
+  s === 'in_review' ? <Clock className="h-4 w-4" /> :
+  <AlertTriangle className="h-4 w-4" />;
+
+const statusStyle = (s: string) =>
+  s === 'resolved' ? 'border-wellness-sage-200 bg-wellness-sage-50 text-wellness-sage-700' :
+  s === 'in_review' ? 'border-wellness-sky-200 bg-wellness-sky-50 text-wellness-sky-700' :
+  'border-red-200 bg-red-50 text-red-700';
+
+const studentRowSelectedClass = 'border-primary-l bg-primary text-white shadow-glow';
+const studentRowDefaultClass = 'border-border bg-surface-alt hover:border-primary-l hover:bg-surface';
+
 export const RiskFlagsPage: React.FC = () => {
   const [flags, setFlags] = useState<RiskFlag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [updatingFlagId, setUpdatingFlagId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'open' | 'in_review' | 'resolved'>('all');
   const [selectedStudent, setSelectedStudent] = useState<GroupedStudent | null>(null);
+  const { socket } = useSocket();
+
+  useEffect(() => { loadFlags(); }, []);
 
   useEffect(() => {
-    loadFlags();
-  }, []);
+    if (!socket) return;
+    const handler = (data: any) => {
+      toast.success(`High-risk alert: ${data.studentName || 'A student'} sent a high-risk message`);
+      loadFlags();
+    };
+    socket.on('riskFlag:created', handler);
+    return () => { socket.off('riskFlag:created', handler); };
+  }, [socket]);
 
   const loadFlags = async () => {
     setIsLoading(true);
     try {
-      const response = await riskAPI.getFlags();
-      setFlags(response.data.flags || []);
-    } catch (error) {
-      toast.error('Failed to load risk flags');
-    } finally {
-      setIsLoading(false);
-    }
+      const res = await riskAPI.getFlags();
+      setFlags(res.data.flags || []);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Failed to load risk flags');
+    } finally { setIsLoading(false); }
   };
 
   const handleStatusUpdate = async (flagId: string, newStatus: 'open' | 'in_review' | 'resolved') => {
+    if (updatingFlagId) return;
+    setUpdatingFlagId(flagId);
     try {
       await riskAPI.updateFlag(flagId, { status: newStatus });
-      toast.success('Flag status updated');
-      loadFlags();
-    } catch (error) {
-      toast.error('Failed to update flag status');
-    }
+      setFlags((prev) => prev.map((f) => f._id === flagId ? { ...f, status: newStatus, updatedAt: new Date().toISOString() } : f));
+      toast.success('Flag updated');
+      void loadFlags();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Failed to update flag');
+    } finally { setUpdatingFlagId(null); }
   };
 
-  // Group flags by student
   const groupedStudents: GroupedStudent[] = React.useMemo(() => {
-    const studentMap = new Map<string, GroupedStudent>();
-
+    const map = new Map<string, GroupedStudent>();
     flags.forEach((flag) => {
-      if (!flag.userId) return; // Skip if userId is null/undefined
-
-      const userId = flag.userId._id;
-      if (!studentMap.has(userId)) {
-        studentMap.set(userId, {
-          userId,
-          userName: flag.userId.name,
-          userEmail: flag.userId.email,
-          flags: [],
-          highestSeverity: 0,
-          openCount: 0,
-          inReviewCount: 0,
-          resolvedCount: 0,
-        });
-      }
-
-      const student = studentMap.get(userId)!;
-      student.flags.push(flag);
-      student.highestSeverity = Math.max(student.highestSeverity, flag.severity);
-
-      if (flag.status === 'open') student.openCount++;
-      else if (flag.status === 'in_review') student.inReviewCount++;
-      else if (flag.status === 'resolved') student.resolvedCount++;
+      if (!flag.userId) return;
+      const id = flag.userId._id;
+      if (!map.has(id)) map.set(id, { userId: id, userName: flag.userId.name, userEmail: flag.userId.email, flags: [], highestSeverity: 0, openCount: 0, inReviewCount: 0, resolvedCount: 0 });
+      const s = map.get(id)!;
+      s.flags.push(flag);
+      s.highestSeverity = Math.max(s.highestSeverity, flag.severity);
+      if (flag.status === 'open') s.openCount++;
+      else if (flag.status === 'in_review') s.inReviewCount++;
+      else s.resolvedCount++;
     });
-
-    return Array.from(studentMap.values()).sort((a, b) => {
-      // Sort by highest severity first, then by open count
-      if (b.highestSeverity !== a.highestSeverity) {
-        return b.highestSeverity - a.highestSeverity;
-      }
-      return b.openCount - a.openCount;
-    });
+    return Array.from(map.values()).sort((a, b) => b.highestSeverity - a.highestSeverity || b.openCount - a.openCount);
   }, [flags]);
 
-  // Filter students based on selected filter
   const filteredStudents = React.useMemo(() => {
     if (filter === 'all') return groupedStudents;
-    return groupedStudents.filter((student) => {
-      if (filter === 'open') return student.openCount > 0;
-      if (filter === 'in_review') return student.inReviewCount > 0;
-      if (filter === 'resolved') return student.resolvedCount > 0 && student.openCount === 0 && student.inReviewCount === 0;
+    return groupedStudents.filter((s) => {
+      if (filter === 'open') return s.openCount > 0;
+      if (filter === 'in_review') return s.inReviewCount > 0;
+      if (filter === 'resolved') return s.resolvedCount > 0 && s.openCount === 0 && s.inReviewCount === 0;
       return true;
     });
   }, [groupedStudents, filter]);
 
-  const getSeverityColor = (severity: number) => {
-    if (severity >= 3) return 'text-red-600 bg-red-50 border-red-200';
-    if (severity >= 2) return 'text-orange-600 bg-orange-50 border-orange-200';
-    return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-  };
+  React.useEffect(() => {
+    if (!selectedStudent?.userId) return;
+    setSelectedStudent(groupedStudents.find((s) => s.userId === selectedStudent.userId) || null);
+  }, [groupedStudents, selectedStudent?.userId]);
 
-  const getSeverityLabel = (severity: number) => {
-    if (severity >= 3) return 'High';
-    if (severity >= 2) return 'Medium';
-    return 'Low';
-  };
-
-  const getStatusIcon = (status: string) => {
-    if (status === 'resolved') return <CheckCircle className="w-4 h-4" />;
-    if (status === 'in_review') return <Clock className="w-4 h-4" />;
-    return <AlertTriangle className="w-4 h-4" />;
-  };
-
-  const getStatusVariant = (status: string): 'positive' | 'info' | 'negative' => {
-    if (status === 'resolved') return 'positive';
-    if (status === 'in_review') return 'info';
-    return 'negative';
-  };
-
-  const studentCounts = {
-    all: groupedStudents.length,
-    open: groupedStudents.filter((s) => s.openCount > 0).length,
-    in_review: groupedStudents.filter((s) => s.inReviewCount > 0).length,
-    resolved: groupedStudents.filter((s) => s.resolvedCount > 0 && s.openCount === 0 && s.inReviewCount === 0).length,
-  };
+  const counts = { all: groupedStudents.length, open: groupedStudents.filter(s => s.openCount > 0).length, in_review: groupedStudents.filter(s => s.inReviewCount > 0).length, resolved: groupedStudents.filter(s => s.resolvedCount > 0 && s.openCount === 0 && s.inReviewCount === 0).length };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ti-green-600 mx-auto mb-4" />
-          <p className="text-ti-ink/70">Loading risk flags...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center py-24 gap-3">
+        <Loader2 className="h-10 w-10 animate-spin text-wellness-sage-400" />
+        <p className="text-sm text-muted">Loading risk flags…</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full">
-      <div className="mb-6">
-        <h1 className="text-3xl font-extrabold tracking-tight text-ti-ink-900 mb-2">Risk Flags</h1>
-        <p className="text-ti-ink/70">Monitor and manage student risk indicators</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-text">Risk Flags</h1>
+        <p className="text-sm text-muted">Monitor and manage student risk indicators</p>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Students List */}
-        <div className="lg:col-span-1">
-          <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft">
-            <CardHeader>
-              <CardTitle className="text-ti-ink-900">Students with Flags</CardTitle>
-              {/* Filter Tabs */}
-              <div className="flex gap-2 mt-4 flex-wrap">
-                {(['all', 'open', 'in_review', 'resolved'] as const).map((status) => (
-                  <motion.button
-                    key={status}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setFilter(status)}
-                    className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-all ${
-                      filter === status
-                        ? 'bg-ti-green-500 text-white shadow-md'
-                        : 'bg-ti-beige-100 border border-ti-beige-300 text-ti-ink-700 hover:border-ti-green-300'
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Students list */}
+        <div className="card-wellness p-5">
+          <p className="mb-3 text-sm font-bold text-text">Students with flags</p>
+
+          {/* Filter tabs */}
+          <div className="mb-4 flex flex-wrap gap-1.5">
+            {(['all', 'open', 'in_review', 'resolved'] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setFilter(s)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                  filter === s
+                    ? 'bg-wellness-sage-500 text-white shadow-glow'
+                    : 'border border-border bg-surface-alt text-muted hover:border-wellness-sage-300 hover:text-wellness-sage-600'
+                }`}
+              >
+                {s === 'in_review' ? 'In Review' : s.charAt(0).toUpperCase() + s.slice(1)} ({counts[s]})
+              </button>
+            ))}
+          </div>
+
+          <div className="max-h-[600px] space-y-2 overflow-y-auto">
+            {filteredStudents.length === 0 ? (
+              <div className="py-10 text-center">
+                <ShieldAlert className="mx-auto mb-2 h-7 w-7 text-muted" />
+                <p className="text-sm text-muted">No students in this filter</p>
+              </div>
+            ) : (
+              filteredStudents.map((student) => {
+                const isSelected = selectedStudent?.userId === student.userId;
+
+                return (
+                  <motion.div
+                    key={student.userId}
+                    whileHover={{ scale: 1.01 }}
+                    onClick={() => setSelectedStudent(student)}
+                    className={`cursor-pointer rounded-xl border p-3 transition ${
+                      isSelected ? studentRowSelectedClass : studentRowDefaultClass
                     }`}
                   >
-                    {status === 'all' ? 'All' : status === 'in_review' ? 'In Review' : status.charAt(0).toUpperCase() + status.slice(1)}{' '}
-                    ({studentCounts[status]})
-                  </motion.button>
-                ))}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                {filteredStudents.length === 0 ? (
-                  <p className="text-black/60 text-center py-8">
-                    {filter === 'all' ? 'No students with flags' : `No students with ${filter} flags`}
-                  </p>
-                ) : (
-                  filteredStudents.map((student) => (
-                    <motion.div
-                      key={student.userId}
-                      whileHover={{ scale: 1.02 }}
-                      onClick={() => setSelectedStudent(student)}
-                      className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                        selectedStudent?.userId === student.userId
-                          ? 'bg-ti-green-50 border-ti-green-500 shadow-soft'
-                          : 'bg-[#f6e7cf] border-[#d5bc99] hover:border-[#caa677]'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-sm text-ti-ink-900 truncate">{student.userName}</h3>
-                          <p className="text-xs text-black/60 mt-0.5 truncate">{student.userEmail}</p>
-                          <div className="flex gap-1 mt-2 flex-wrap">
-                            {student.openCount > 0 && (
-                              <Badge variant="negative" className="text-xs">
-                                {student.openCount} Open
-                              </Badge>
-                            )}
-                            {student.inReviewCount > 0 && (
-                              <Badge variant="info" className="text-xs">
-                                {student.inReviewCount} Review
-                              </Badge>
-                            )}
-                            {student.resolvedCount > 0 && (
-                              <Badge variant="positive" className="text-xs">
-                                {student.resolvedCount} Resolved
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <div
-                            className={`px-2 py-0.5 rounded border text-xs font-bold ${getSeverityColor(student.highestSeverity)}`}
-                          >
-                            {getSeverityLabel(student.highestSeverity)}
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-ti-ink/40" />
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className={`truncate text-sm font-semibold ${isSelected ? 'text-white' : 'text-text'}`}>{student.userName}</p>
+                        <p className={`truncate text-xs ${isSelected ? 'text-white/80' : 'text-muted'}`}>{student.userEmail}</p>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {student.openCount > 0 && <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">{student.openCount} Open</span>}
+                          {student.inReviewCount > 0 && <span className="rounded-full border border-wellness-sky-200 bg-wellness-sky-50 px-2 py-0.5 text-xs font-medium text-wellness-sky-700">{student.inReviewCount} Review</span>}
+                          {student.resolvedCount > 0 && <span className="rounded-full border border-wellness-sage-200 bg-wellness-sage-50 px-2 py-0.5 text-xs font-medium text-wellness-sage-700">{student.resolvedCount} Done</span>}
                         </div>
                       </div>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`rounded-full border px-2 py-0.5 text-xs font-bold ${severityStyle(student.highestSeverity)}`}>
+                          {severityLabel(student.highestSeverity)}
+                        </span>
+                        <ChevronRight className={`h-4 w-4 ${isSelected ? 'text-white/80' : 'text-muted'}`} />
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </div>
         </div>
 
-        {/* Flag Details */}
+        {/* Flag detail */}
         <div className="lg:col-span-2">
           {!selectedStudent ? (
-            <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft">
-              <CardContent className="py-16">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">⚠️</div>
-                  <p className="text-ti-ink-800">Select a student to view their risk flags</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="card-wellness flex flex-col items-center justify-center py-24 text-center">
+              <ShieldAlert className="mb-3 h-12 w-12 text-muted" />
+              <p className="text-sm text-muted">Select a student to view their risk flags</p>
+            </div>
           ) : (
             <div className="space-y-4">
-              {/* Student Header */}
-              <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-ti-ink-900 text-xl">{selectedStudent.userName}</CardTitle>
-                      <p className="text-sm text-ti-ink/60 mt-1">{selectedStudent.userEmail}</p>
-                    </div>
-                    <div className={`px-3 py-1.5 rounded-lg border-2 font-bold text-sm ${getSeverityColor(selectedStudent.highestSeverity)}`}>
-                      Highest: {getSeverityLabel(selectedStudent.highestSeverity)} Risk
-                    </div>
+              {/* Student header */}
+              <div className="card-wellness p-5">
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-text">{selectedStudent.userName}</h2>
+                    <p className="text-xs text-muted">{selectedStudent.userEmail}</p>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="p-3 bg-red-50 rounded-xl">
-                      <div className="text-2xl font-bold text-red-600">{selectedStudent.openCount}</div>
-                      <div className="text-xs text-black/60 mt-1">Open</div>
+                  <span className={`rounded-lg border px-3 py-1 text-sm font-bold ${severityStyle(selectedStudent.highestSeverity)}`}>
+                    Highest: {severityLabel(selectedStudent.highestSeverity)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Open',      val: selectedStudent.openCount,      bg: 'bg-red-50',                  text: 'text-red-600' },
+                    { label: 'In Review', val: selectedStudent.inReviewCount,  bg: 'bg-wellness-sky-50',         text: 'text-wellness-sky-600' },
+                    { label: 'Resolved',  val: selectedStudent.resolvedCount,  bg: 'bg-wellness-sage-50',        text: 'text-wellness-sage-600' },
+                  ].map(({ label, val, bg, text }) => (
+                    <div key={label} className={`rounded-xl ${bg} py-3 text-center`}>
+                      <p className={`text-2xl font-bold ${text}`}>{val}</p>
+                      <p className="text-xs text-muted">{label}</p>
                     </div>
-                    <div className="p-3 bg-blue-50 rounded-xl">
-                      <div className="text-2xl font-bold text-blue-600">{selectedStudent.inReviewCount}</div>
-                      <div className="text-xs text-black/60 mt-1">In Review</div>
-                    </div>
-                    <div className="p-3 bg-green-50 rounded-xl">
-                      <div className="text-2xl font-bold text-green-600">{selectedStudent.resolvedCount}</div>
-                      <div className="text-xs text-black/60 mt-1">Resolved</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  ))}
+                </div>
+              </div>
 
-              {/* Individual Flags */}
+              {/* Individual flags */}
               <AnimatePresence>
                 {selectedStudent.flags.map((flag) => (
                   <motion.div
                     key={flag._id}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
+                    exit={{ opacity: 0 }}
+                    className="card-wellness p-5"
                   >
-                    <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft hover:shadow-lg transition-shadow">
-                      <CardContent className="p-5">
-                        <div className="flex items-start justify-between gap-4">
-                          {/* Left: Tags & Info */}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-3">
-                              <Badge variant={getStatusVariant(flag.status)} className="flex items-center gap-1">
-                                {getStatusIcon(flag.status)}
-                                {flag.status === 'in_review' ? 'In Review' : flag.status.charAt(0).toUpperCase() + flag.status.slice(1)}
-                              </Badge>
-                              <div className={`px-2 py-1 rounded border text-xs font-bold ${getSeverityColor(flag.severity)}`}>
-                                {getSeverityLabel(flag.severity)} Risk
-                              </div>
-                            </div>
-
-                            {/* Tags */}
-                            <div className="flex flex-wrap gap-2 mb-3">
-                              {flag.tags.map((tag) => (
-                                <Badge key={tag} variant="neutral" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-
-                            <p className="text-xs text-ti-ink/50">
-                              Flagged {new Date(flag.createdAt).toLocaleString()}
-                            </p>
-                          </div>
-
-                          {/* Right: Actions */}
-                          <div className="flex gap-2">
-                            {flag.status !== 'in_review' && (
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleStatusUpdate(flag._id, 'in_review')}
-                                className="px-3 py-1.5 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition-colors"
-                              >
-                                Review
-                              </motion.button>
-                            )}
-                            {flag.status !== 'resolved' && (
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleStatusUpdate(flag._id, 'resolved')}
-                                className="px-3 py-1.5 bg-ti-green-500 text-white text-xs rounded-lg hover:bg-ti-green-600 transition-colors"
-                              >
-                                Resolve
-                              </motion.button>
-                            )}
-                            {flag.status !== 'open' && (
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleStatusUpdate(flag._id, 'open')}
-                                className="px-3 py-1.5 bg-gray-500 text-white text-xs rounded-lg hover:bg-gray-600 transition-colors"
-                              >
-                                Reopen
-                              </motion.button>
-                            )}
-                          </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span className={`flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusStyle(flag.status)}`}>
+                            {statusIcon(flag.status)}
+                            {flag.status === 'in_review' ? 'In Review' : flag.status.charAt(0).toUpperCase() + flag.status.slice(1)}
+                          </span>
+                          <span className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${severityStyle(flag.severity)}`}>
+                            {severityLabel(flag.severity)} Risk
+                          </span>
+                          {flag.tags.map((tag) => (
+                            <span key={tag} className="rounded-full border border-wellness-lavender-200 bg-wellness-lavender-50 px-2.5 py-0.5 text-xs font-medium text-wellness-lavender-700">{tag}</span>
+                          ))}
                         </div>
-                      </CardContent>
-                    </Card>
+                        <p className="text-xs text-muted">Flagged {new Date(flag.createdAt).toLocaleString('en-SG')}</p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5">
+                        {flag.status !== 'in_review' && (
+                          <button
+                            disabled={!!updatingFlagId}
+                            onClick={() => handleStatusUpdate(flag._id, 'in_review')}
+                            className="rounded-lg border border-wellness-sky-300 bg-wellness-sky-50 px-2.5 py-1.5 text-xs font-semibold text-wellness-sky-700 transition hover:bg-wellness-sky-100 disabled:opacity-60"
+                          >
+                            Review
+                          </button>
+                        )}
+                        {flag.status !== 'resolved' && (
+                          <button
+                            disabled={!!updatingFlagId}
+                            onClick={() => handleStatusUpdate(flag._id, 'resolved')}
+                            className="rounded-lg border border-wellness-sage-300 bg-wellness-sage-50 px-2.5 py-1.5 text-xs font-semibold text-wellness-sage-700 transition hover:bg-wellness-sage-100 disabled:opacity-60"
+                          >
+                            Resolve
+                          </button>
+                        )}
+                        {flag.status !== 'open' && (
+                          <button
+                            disabled={!!updatingFlagId}
+                            onClick={() => handleStatusUpdate(flag._id, 'open')}
+                            className="rounded-lg border border-border bg-surface-alt px-2.5 py-1.5 text-xs font-semibold text-muted transition hover:bg-surface disabled:opacity-60"
+                          >
+                            Reopen
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </motion.div>
                 ))}
               </AnimatePresence>

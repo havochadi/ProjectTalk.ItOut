@@ -53,6 +53,15 @@ interface Message {
   threadId?: string;
 }
 
+const panelCardClass = 'rounded-3xl border border-border bg-surface text-text shadow-card';
+const statTileClass = 'text-center rounded-xl border border-border bg-surface-alt p-4 text-text';
+const mutedTextClass = 'text-muted';
+const selectedStudentClass = 'bg-primary border-primary-l text-white shadow-glow';
+const unselectedStudentClass =
+  'bg-surface-alt border-border hover:border-primary-l hover:bg-wellness-sage-50 dark:hover:bg-surface';
+const conversationPanelClass =
+  'rounded-xl border border-border bg-surface-alt p-4 text-text max-h-[400px] overflow-y-auto space-y-3';
+
 export const CounselorStudentsPage: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -131,9 +140,9 @@ export const CounselorStudentsPage: React.FC = () => {
   );
 
   const getMoodColor = (mood: number) => {
-    if (mood >= 4) return 'text-ti-green-600';
-    if (mood >= 3) return 'text-yellow-600';
-    return 'text-red-600';
+    if (mood >= 4) return 'text-wellness-sage-500 dark:text-wellness-sage-300';
+    if (mood >= 3) return 'text-amber-600 dark:text-amber-300';
+    return 'text-red-600 dark:text-red-300';
   };
 
   const getMoodEmoji = (mood: number) => {
@@ -163,14 +172,14 @@ export const CounselorStudentsPage: React.FC = () => {
 
   return (
     <div className="w-full">
-      <h1 className="text-3xl font-extrabold tracking-tight text-ti-ink-900 mb-6">Students</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-text mb-6">Students</h1>
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Students List */}
         <div className="lg:col-span-1">
-          <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft">
+          <Card className={panelCardClass}>
             <CardHeader>
-              <CardTitle className="text-ti-ink-900">All Students ({filteredStudents.length})</CardTitle>
+              <CardTitle className="text-text">All Students ({filteredStudents.length})</CardTitle>
               <div className="mt-4">
                 <Input
                   placeholder="Search by name, email, or school..."
@@ -182,7 +191,7 @@ export const CounselorStudentsPage: React.FC = () => {
             <CardContent>
               <div className="space-y-2 max-h-[600px] overflow-y-auto">
                 {filteredStudents.length === 0 ? (
-                  <p className="text-black/60 text-center py-8">No students found</p>
+                  <p className="text-muted text-center py-8">No students found</p>
                 ) : (
                   filteredStudents.map((student) => (
                     <motion.div
@@ -191,24 +200,24 @@ export const CounselorStudentsPage: React.FC = () => {
                       onClick={() => handleStudentClick(student)}
                       className={`cursor-pointer rounded-2xl border transition-all ${
                         selectedStudent?._id === student._id
-                          ? 'bg-[#caa677] border-[#7d5a33] shadow-soft text-white'
-                          : 'bg-[#f6e7cf] border-[#d5bc99] hover:border-[#caa677]'
+                          ? selectedStudentClass
+                          : unselectedStudentClass
                       } p-3`}
                     >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className={`font-medium text-sm ${selectedStudent?._id === student._id ? 'text-white' : 'text-[#2f2015]'}`}>
-                              {student.name}
-                            </h3>
-                            <p className={`text-xs mt-0.5 ${selectedStudent?._id === student._id ? 'text-white/80' : 'text-[#5f4733]'}`}>
-                              {student.email}
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className={`font-medium text-sm ${selectedStudent?._id === student._id ? 'text-white' : 'text-text'}`}>
+                            {student.name}
+                          </h3>
+                          <p className={`text-xs mt-0.5 ${selectedStudent?._id === student._id ? 'text-white/80' : 'text-muted'}`}>
+                            {student.email}
+                          </p>
+                          {student.school && (
+                            <p className={`text-xs mt-0.5 ${selectedStudent?._id === student._id ? 'text-white/70' : 'text-muted'}`}>
+                              {student.school}
                             </p>
-                            {student.school && (
-                              <p className={`text-xs mt-0.5 ${selectedStudent?._id === student._id ? 'text-white/70' : 'text-[#7c6045]'}`}>
-                                {student.school}
-                              </p>
-                            )}
-                          </div>
+                          )}
+                        </div>
                         {student.age && (
                           <Badge variant="default" className="text-xs">
                             {student.age}y
@@ -226,23 +235,23 @@ export const CounselorStudentsPage: React.FC = () => {
         {/* Student Details */}
         <div className="lg:col-span-2">
           {!selectedStudent ? (
-            <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft">
+            <Card className={panelCardClass}>
               <CardContent className="py-16">
                 <div className="text-center">
                   <div className="text-6xl mb-4">👥</div>
-                  <p className="text-ti-ink-800">Select a student to view their details</p>
+                  <p className="text-text">Select a student to view their details</p>
                 </div>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-6">
               {/* Student Info Card */}
-              <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft">
+              <Card className={panelCardClass}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-ti-ink-900 text-2xl">{selectedStudent.name}</CardTitle>
-                      <p className="text-sm text-black/60 mt-1">{selectedStudent.email}</p>
+                      <CardTitle className="text-text text-2xl">{selectedStudent.name}</CardTitle>
+                      <p className="text-sm text-muted mt-1">{selectedStudent.email}</p>
                     </div>
                     <Badge variant="info">Student</Badge>
                   </div>
@@ -251,19 +260,19 @@ export const CounselorStudentsPage: React.FC = () => {
                   <div className="grid md:grid-cols-3 gap-4">
                     {selectedStudent.age && (
                       <div>
-                        <p className="text-xs text-black/60 mb-1">Age</p>
-                        <p className="text-sm font-medium text-ti-ink-900">{selectedStudent.age} years old</p>
+                        <p className="text-xs text-muted mb-1">Age</p>
+                        <p className="text-sm font-medium text-text">{selectedStudent.age} years old</p>
                       </div>
                     )}
                     {selectedStudent.school && (
                       <div>
-                        <p className="text-xs text-black/60 mb-1">School</p>
-                        <p className="text-sm font-medium text-ti-ink-900">{selectedStudent.school}</p>
+                        <p className="text-xs text-muted mb-1">School</p>
+                        <p className="text-sm font-medium text-text">{selectedStudent.school}</p>
                       </div>
                     )}
                     <div>
-                      <p className="text-xs text-black/60 mb-1">Joined</p>
-                      <p className="text-sm font-medium text-ti-ink-900">
+                      <p className="text-xs text-muted mb-1">Joined</p>
+                      <p className="text-sm font-medium text-text">
                         {new Date(selectedStudent.createdAt).toLocaleDateString()}
                       </p>
                     </div>
@@ -273,43 +282,43 @@ export const CounselorStudentsPage: React.FC = () => {
 
               {/* Metrics Cards */}
               {isLoadingMetrics ? (
-                <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft">
+                <Card className={panelCardClass}>
                   <CardContent className="py-8">
                     <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ti-green-600 mx-auto mb-2" />
-                      <p className="text-sm text-black/60">Loading metrics...</p>
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-wellness-sage-400 mx-auto mb-2" />
+                      <p className="text-sm text-muted">Loading metrics...</p>
                     </div>
                   </CardContent>
                 </Card>
               ) : studentMetrics ? (
                 <>
                   {/* Check-ins Card */}
-                  <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft">
+                  <Card className={panelCardClass}>
                     <CardHeader>
-                      <CardTitle className="text-ti-ink-900">Check-ins (Last 30 Days)</CardTitle>
+                      <CardTitle className="text-text">Check-ins (Last 30 Days)</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid md:grid-cols-3 gap-4">
-                        <div className="text-center rounded-xl border border-[#d5bc99] bg-[#f6e7cf] p-4 text-[#2f2015]">
+                        <div className={statTileClass}>
                           <div className="text-3xl font-bold">
                             {studentMetrics.checkIns.total}
                           </div>
-                          <div className="mt-1 text-xs text-[#5f4733]">Total Check-ins</div>
+                          <div className={`mt-1 text-xs ${mutedTextClass}`}>Total Check-ins</div>
                         </div>
-                        <div className="text-center rounded-xl border border-[#d5bc99] bg-[#f6e7cf] p-4 text-[#2f2015]">
+                        <div className={statTileClass}>
                           <div className={`text-3xl font-bold ${getMoodColor(studentMetrics.checkIns.averageMood)}`}>
                             {getMoodEmoji(studentMetrics.checkIns.averageMood)}{' '}
                             {studentMetrics.checkIns.averageMood.toFixed(1)}
                           </div>
-                          <div className="mt-1 text-xs text-[#5f4733]">Average Mood</div>
+                          <div className={`mt-1 text-xs ${mutedTextClass}`}>Average Mood</div>
                         </div>
-                        <div className="text-center rounded-xl border border-[#d5bc99] bg-[#f6e7cf] p-4 text-[#2f2015]">
+                        <div className={statTileClass}>
                           <div className="text-sm font-medium">
                             {studentMetrics.checkIns.lastCheckIn
                               ? new Date(studentMetrics.checkIns.lastCheckIn).toLocaleDateString()
                               : 'Never'}
                           </div>
-                          <div className="mt-1 text-xs text-[#5f4733]">Last Check-in</div>
+                          <div className={`mt-1 text-xs ${mutedTextClass}`}>Last Check-in</div>
                         </div>
                       </div>
                     </CardContent>
@@ -317,21 +326,21 @@ export const CounselorStudentsPage: React.FC = () => {
 
                   {/* Tasks & Focus Cards */}
                   <div className="grid md:grid-cols-2 gap-6">
-                    <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft">
+                    <Card className={panelCardClass}>
                       <CardHeader>
-                        <CardTitle className="text-ti-ink-900">Tasks</CardTitle>
+                        <CardTitle className="text-text">Tasks</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-ti-ink-800">Total Tasks</span>
+                          <span className="text-sm text-text">Total Tasks</span>
                           <Badge variant="neutral">{studentMetrics.tasks.total}</Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-ti-ink-800">Completed</span>
+                          <span className="text-sm text-text">Completed</span>
                           <Badge variant="positive">{studentMetrics.tasks.completed}</Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-ti-ink-800">Completion Rate</span>
+                          <span className="text-sm text-text">Completion Rate</span>
                           <Badge variant="info">
                             {studentMetrics.tasks.total > 0
                               ? Math.round((studentMetrics.tasks.completed / studentMetrics.tasks.total) * 100)
@@ -342,21 +351,21 @@ export const CounselorStudentsPage: React.FC = () => {
                       </CardContent>
                     </Card>
 
-                    <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft">
+                    <Card className={panelCardClass}>
                       <CardHeader>
-                        <CardTitle className="text-ti-ink-900">Focus Sessions</CardTitle>
+                        <CardTitle className="text-text">Focus Sessions</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-ti-ink-800">Total Sessions</span>
+                          <span className="text-sm text-text">Total Sessions</span>
                           <Badge variant="neutral">{studentMetrics.focus.totalSessions}</Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-ti-ink-800">Total Minutes</span>
+                          <span className="text-sm text-text">Total Minutes</span>
                           <Badge variant="positive">{studentMetrics.focus.totalMinutes}</Badge>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-ti-ink-800">Avg per Session</span>
+                          <span className="text-sm text-text">Avg per Session</span>
                           <Badge variant="info">
                             {studentMetrics.focus.totalSessions > 0
                               ? Math.round(studentMetrics.focus.totalMinutes / studentMetrics.focus.totalSessions)
@@ -370,19 +379,19 @@ export const CounselorStudentsPage: React.FC = () => {
 
                   {/* Streaks Card */}
                   {selectedStudent.profile?.streaks && selectedStudent.profile.streaks.length > 0 && (
-                    <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft">
+                    <Card className={panelCardClass}>
                       <CardHeader>
-                        <CardTitle className="text-ti-ink-900">Current Streaks</CardTitle>
+                        <CardTitle className="text-text">Current Streaks</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="grid md:grid-cols-3 gap-4">
                           {selectedStudent.profile.streaks.map((streak) => (
-                            <div key={streak.type} className="text-center rounded-xl border border-[#d5bc99] bg-[#f6e7cf] p-4 text-[#2f2015]">
+                            <div key={streak.type} className={statTileClass}>
                               <div className="text-2xl mb-1">
                                 {streak.type === 'checkin' ? '🔥' : streak.type === 'focus' ? '⚡' : '🎯'}
                               </div>
                               <div className="text-2xl font-bold">{streak.count}</div>
-                              <div className="text-xs text-[#5f4733] mt-1 capitalize">{streak.type} Streak</div>
+                              <div className={`text-xs ${mutedTextClass} mt-1 capitalize`}>{streak.type} Streak</div>
                             </div>
                           ))}
                         </div>
@@ -391,9 +400,9 @@ export const CounselorStudentsPage: React.FC = () => {
                   )}
 
                   {/* Message Student Card */}
-                  <Card className="rounded-3xl border border-[#c6a77f] bg-[#d7bb94] text-[#2f2015] shadow-soft">
+                  <Card className={panelCardClass}>
                     <CardHeader>
-                      <CardTitle className="text-ti-ink-900 flex items-center gap-2">
+                      <CardTitle className="text-text flex items-center gap-2">
                         <Send className="w-5 h-5" />
                         Conversation with {selectedStudent.name}
                       </CardTitle>
@@ -403,16 +412,16 @@ export const CounselorStudentsPage: React.FC = () => {
                         {/* Conversation History */}
                         {isLoadingMessages ? (
                           <div className="text-center py-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ti-green-500 mx-auto mb-2" />
-                            <p className="text-sm text-ti-ink/60">Loading conversation...</p>
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-wellness-sage-400 mx-auto mb-2" />
+                            <p className="text-sm text-muted">Loading conversation...</p>
                           </div>
                         ) : conversationMessages.length > 0 ? (
-                          <div className="rounded-xl border border-[#d5bc99] bg-[#f6e7cf] p-4 text-[#2f2015] max-h-[400px] overflow-y-auto space-y-3">
-                            <p className="text-xs text-ti-ink/60 mb-3 text-center">
+                          <div className={conversationPanelClass}>
+                            <p className="text-xs text-muted mb-3 text-center">
                               Message history with {selectedStudent.name}
                             </p>
                             {conversationMessages.map((msg) => {
-                              const messageAuthorId = msg.fromUserId?._id || msg.fromUserId?.id || (msg.fromUserId as any);
+                              const messageAuthorId = msg.fromUserId?._id || (msg.fromUserId as any);
                               const isFromCounselor =
                                 (selectedStudent && messageAuthorId !== selectedStudent._id) ||
                                 msg.fromUserId?.role === 'counselor' ||
@@ -422,24 +431,24 @@ export const CounselorStudentsPage: React.FC = () => {
                                   key={msg._id}
                                   className={`flex ${isFromCounselor ? 'justify-end' : 'justify-start'}`}
                                 >
-                            <div
-                              className={`max-w-[80%] p-3 rounded-xl ${
-                                isFromCounselor
-                                ? 'bg-[#caa677] text-white'
-                                : 'bg-[#fdf1dd] border border-[#d5bc99] text-[#2f2015]'
-                              }`}
-                            >
+                                  <div
+                                    className={`max-w-[80%] p-3 rounded-xl ${
+                                      isFromCounselor
+                                        ? 'bg-primary text-white shadow-card'
+                                        : 'bg-surface border border-border text-text'
+                                    }`}
+                                  >
                                     <div className="flex items-center gap-2 mb-1">
                                       <span
                                         className={`text-xs font-medium ${
-                                          isFromCounselor ? 'text-white/90' : 'text-ti-ink/70'
+                                          isFromCounselor ? 'text-white/90' : 'text-muted'
                                         }`}
                                       >
                                         {msg.fromUserId.name}
                                       </span>
                                       <span
                                         className={`text-xs ${
-                                          isFromCounselor ? 'text-white/70' : 'text-ti-ink/50'
+                                          isFromCounselor ? 'text-white/70' : 'text-muted'
                                         }`}
                                       >
                                         {new Date(msg.createdAt).toLocaleString()}
@@ -452,27 +461,27 @@ export const CounselorStudentsPage: React.FC = () => {
                             })}
                           </div>
                         ) : (
-                          <div className="rounded-xl border border-[#d5bc99] bg-[#f6e7cf] p-8 text-center text-[#2f2015]">
-                            <p className="text-sm text-[#5f4733]">
+                          <div className="rounded-xl border border-border bg-surface-alt p-8 text-center text-text">
+                            <p className="text-sm text-muted">
                               No messages yet. Start the conversation with {selectedStudent.name}!
                             </p>
                           </div>
                         )}
 
                         {/* Message Input */}
-                        <div className="pt-2 border-t-2 border-ti-beige-200">
+                        <div className="pt-2 border-t-2 border-border">
                           <TextArea
                             value={messageText}
                             onChange={(e) => setMessageText(e.target.value)}
                             placeholder={`Write a message to ${selectedStudent.name}...`}
-                            className="min-h-[120px] bg-white border-2 border-ti-beige-300 rounded-xl focus:ring-2 focus:ring-ti-green-500 focus:border-ti-green-500"
+                            className="min-h-[120px] bg-surface border border-border rounded-xl focus:ring-2 focus:ring-wellness-sage-400 focus:border-wellness-sage-400"
                           />
                           <div className="flex justify-end mt-3">
                             <Button
                               onClick={handleSendMessage}
                               disabled={!messageText.trim() || isSendingMessage}
                               isLoading={isSendingMessage}
-                              className="bg-gradient-to-r from-ti-green-500 to-ti-teal-500 text-white rounded-xl px-6 shadow-md hover:shadow-lg"
+                              className="bg-primary text-white rounded-full px-6 hover:bg-primary-d"
                             >
                               <Send className="w-4 h-4 mr-2" />
                               Send Message

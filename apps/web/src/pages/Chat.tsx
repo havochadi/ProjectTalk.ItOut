@@ -1,18 +1,36 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button, TextArea } from '@talkitout/ui';
+import { TextArea } from '@talkitout/ui';
 import { chatAPI, checkInAPI } from '../api/client';
 import toast from 'react-hot-toast';
-import { Mic, MicOff, Send, VolumeX, MessageCircle } from 'lucide-react';
+import { Mic, MicOff, Send, VolumeX, Heart, Phone, X, Sparkles } from 'lucide-react';
 import { MessageBubble } from '../components/MessageBubble';
+import { AvatarCanvas } from '../components/avatar/AvatarCanvas';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  initializeVoiceClient,
-  isVoiceEnabled,
-  startBrowserRecognition,
-  isBrowserSpeechSupported,
-  stopAllSpeech,
+  initializeVoiceClient, isVoiceEnabled, startBrowserRecognition,
+  isBrowserSpeechSupported, speak, stopAllSpeech,
 } from '../lib/voiceClient';
+
+const moods = [
+  { value: 5, emoji: '😄', label: 'Great!',      color: 'border-wellness-sage-300 hover:bg-wellness-sage-50' },
+  { value: 4, emoji: '😊', label: 'Pretty good', color: 'border-wellness-sage-200 hover:bg-wellness-sage-50' },
+  { value: 3, emoji: '😐', label: 'Just okay',   color: 'border-wellness-sky-200 hover:bg-wellness-sky-50' },
+  { value: 2, emoji: '😕', label: 'Not great',   color: 'border-wellness-lavender-200 hover:bg-wellness-lavender-50' },
+  { value: 1, emoji: '😰', label: 'Struggling',  color: 'border-wellness-peach-200 hover:bg-wellness-peach-50' },
+];
+
+const suggestedPrompts = [
+  "I'm feeling stressed today",
+  'Can we just talk?',
+  'I need help organizing',
+  'How can I feel better?',
+];
+
+const chatPanelStyle = {
+  height: 'calc(100vh - 260px)',
+  minHeight: '420px',
+};
 
 export const ChatPage: React.FC = () => {
   const { user } = useAuth();
@@ -25,422 +43,380 @@ export const ChatPage: React.FC = () => {
   const [stopRecordingFn, setStopRecordingFn] = useState<(() => Promise<string>) | null>(null);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
-  const [lastMessageId, setLastMessageId] = useState<string | null>(null);
   const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
+  const [showCrisisAlert, setShowCrisisAlert] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const moods = [
-    { value: 4, emoji: '😊', label: 'Pretty good' },
-    { value: 3, emoji: '😐', label: 'Okay, I guess' },
-    { value: 2, emoji: '😕', label: 'Not great' },
-    { value: 1, emoji: '😰', label: 'Stressed' },
-  ];
 
   useEffect(() => {
     loadHistory();
     initVoice();
     checkTodayMood();
-
-    // Load auto-play preference from localStorage (default to true if not set)
-    const savedAutoPlay = localStorage.getItem('autoPlayVoice');
-    if (savedAutoPlay !== null) {
-      setAutoPlayVoice(savedAutoPlay === 'true');
+    const saved = localStorage.getItem('autoPlayVoice');
+    if (saved !== null) {
+      setAutoPlayVoice(saved === 'true');
     } else {
-      // Set default to true and save to localStorage
-      setAutoPlayVoice(true);
       localStorage.setItem('autoPlayVoice', 'true');
     }
   }, []);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  // Show mood selector if no messages and hasn't checked in today
   useEffect(() => {
-    if (messages.length === 0 && !hasCheckedInToday) {
-      setShowMoodSelector(true);
-    }
+    if (messages.length === 0 && !hasCheckedInToday) setShowMoodSelector(true);
   }, [messages, hasCheckedInToday]);
 
   const checkTodayMood = async () => {
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const response = await checkInAPI.getMine({
-        startDate: today.toISOString(),
-        limit: 1,
-      });
-
-      const hasCheckin = response.data.checkIns && response.data.checkIns.length > 0;
-      setHasCheckedInToday(hasCheckin);
-    } catch (error) {
-      console.error('Error checking today mood:', error);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const res = await checkInAPI.getMine({ startDate: today.toISOString(), limit: 1 });
+      setHasCheckedInToday(res.data.checkIns?.length > 0);
+    } catch {
+      // A missing check-in should not prevent chat from loading.
     }
   };
 
   const initVoice = async () => {
-    try {
-      await initializeVoiceClient();
-      setVoiceEnabled(isVoiceEnabled());
-    } catch (error) {
-      console.error('Failed to initialize voice client:', error);
+    try { await initializeVoiceClient(); setVoiceEnabled(isVoiceEnabled()); } catch {
+      // Voice is optional; text chat remains available.
     }
   };
 
   const loadHistory = async () => {
     try {
-      const response = await chatAPI.getHistory({ limit: 50 });
-      setMessages(response.data.messages);
-    } catch (error) {
-      console.error('Failed to load chat history:', error);
+      const res = await chatAPI.getHistory({ limit: 50 });
+      setMessages(res.data.messages);
+    } catch {
+      // Start with an empty history when the history request is unavailable.
     }
   };
 
   const handleClearChat = async () => {
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      'Are you sure you want to delete all chat messages? This action cannot be undone.'
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
+    if (!window.confirm('Clear all chat messages? This cannot be undone.')) return;
     try {
       await chatAPI.clearHistory();
       setMessages([]);
       setShowMoodSelector(true);
       setHasCheckedInToday(false);
-      toast.success('Chat history cleared');
-    } catch (error) {
-      console.error('Failed to clear chat history:', error);
-      toast.error('Failed to clear chat history');
-    }
-  };
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      toast.success('Chat cleared');
+    } catch { toast.error('Failed to clear chat'); }
   };
 
   const handleMoodSelect = async (moodValue: number, moodLabel: string) => {
+    setShowMoodSelector(false);
     try {
-      // Hide the mood selector immediately so user sees their message
-      setShowMoodSelector(false);
-
-      // Save mood check-in
       await checkInAPI.create({ mood: moodValue });
       setHasCheckedInToday(true);
-
-      // Send a message indicating mood selection
-      const moodMessage = `I'm feeling ${moodLabel.toLowerCase()}`;
-      await handleSend(moodMessage);
-    } catch (error) {
-      console.error('Error saving mood:', error);
+      await handleSend(`I'm feeling ${moodLabel.toLowerCase()}`);
+    } catch {
       toast.error('Failed to save mood');
-      // Show mood selector again if there's an error
       setShowMoodSelector(true);
     }
   };
 
   const handleSend = async (messageText?: string) => {
-    const textToSend = messageText || input.trim();
-    if (!textToSend || isLoading) return;
-
+    const text = messageText || input.trim();
+    if (!text || isLoading) return;
     setInput('');
     setIsLoading(true);
-
     try {
-      const response = await chatAPI.sendMessage(textToSend);
-      const { userMessage: savedUserMsg, aiMessage } = response.data;
+      const res = await chatAPI.sendMessage(text);
+      const { userMessage: savedUser, aiMessage } = res.data;
 
-      // Track the new AI message ID for auto-play
-      setLastMessageId(aiMessage.id || aiMessage._id);
+      if (savedUser.severity >= 3) {
+        setShowCrisisAlert(true);
+        setTimeout(() => setShowCrisisAlert(false), 15000);
+      }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          ...savedUserMsg,
-          role: 'user',
-        },
-        {
-          ...aiMessage,
-          role: 'assistant',
-        },
-      ]);
-    } catch (error: any) {
+      setMessages((prev) => [...prev, { ...savedUser, role: 'user' }, { ...aiMessage, role: 'assistant' }]);
+
+      if (autoPlayVoice && voiceEnabled) {
+        setIsAssistantSpeaking(true);
+        void speak(aiMessage.text)
+          .catch(() => undefined)
+          .finally(() => setIsAssistantSpeaking(false));
+      }
+    } catch {
       toast.error('Failed to send message');
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleMicClick = async () => {
-    // Check if browser supports speech recognition
     if (!isBrowserSpeechSupported() && !isRecordingAudio) {
-      toast.error('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
+      toast.error('Speech recognition not supported. Please use Chrome, Edge, or Safari.');
       return;
     }
-
     if (isRecordingAudio) {
-      // Stop recording
       if (stopRecordingFn) {
+        setIsLoading(true);
         try {
-          setIsLoading(true);
           const transcript = await stopRecordingFn();
           setIsRecordingAudio(false);
           setStopRecordingFn(null);
-
-          if (transcript && transcript.length > 3) {
-            // Auto-send if transcript has more than 3 characters
+          if (transcript?.length > 3) {
             await handleSend(transcript);
           } else if (transcript) {
-            // Otherwise just populate the input
             setInput(transcript);
             toast.success('Transcribed! Edit or send.');
           } else {
             toast.error('No speech detected');
           }
-        } catch (error) {
-          console.error('Transcription error:', error);
-          toast.error('Failed to transcribe audio');
-        } finally {
-          setIsLoading(false);
-        }
+        } catch { toast.error('Failed to transcribe audio'); }
+        finally { setIsLoading(false); }
       }
     } else {
-      // Start browser-based speech recognition with real-time transcript updates
       try {
-        const stopFn = await startBrowserRecognition((transcript) => {
-          // Update input field in real-time as user speaks
-          setInput(transcript);
-        });
+        const stopFn = await startBrowserRecognition((t) => setInput(t));
         setStopRecordingFn(() => stopFn);
         setIsRecordingAudio(true);
-        toast.success('Listening... Speak now', {
-          duration: 2000,
-          icon: '🎙️',
-        });
+        toast.success('Listening… Speak now', { duration: 2000, icon: '🎙️' });
       } catch (error: any) {
-        console.error('Speech recognition error:', error);
-        if (error.message.includes('not-allowed')) {
-          toast.error('Microphone access denied');
-        } else {
-          toast.error(error.message || 'Failed to start speech recognition');
-        }
+        toast.error(error.message?.includes('not-allowed') ? 'Microphone access denied' : (error.message || 'Failed to start'));
       }
     }
   };
 
-  const handleStopSpeaking = () => {
-    stopAllSpeech();
-    setIsAssistantSpeaking(false);
-  };
-
-  const suggestedPrompts = [
-    "I'm feeling stressed today",
-    'Can we just talk?',
-    'I need help organizing things',
-    'How can I feel better?',
-  ];
-
-  const handlePromptClick = (prompt: string) => {
-    setInput(prompt);
-  };
-
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div
-        className="flex flex-col overflow-hidden rounded-[32px] border border-border bg-surface shadow-soft"
-        style={{ height: 'calc(100vh - 180px)', minHeight: '520px' }}
-      >
-        {/* Header */}
-        <div className="border-b border-border/70 bg-[#f3e5d3] px-6 py-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <p className="text-[0.65rem] uppercase tracking-[0.35em] text-black">Talk</p>
-              <h1 className="mt-1 flex items-center gap-2 text-3xl font-semibold text-text">
-                <MessageCircle className="h-6 w-6 text-brown1" />
-                Let's Talk
-              </h1>
-              <p className="mt-1 text-sm text-black/70">I'm here to listen and support you.</p>
-            </div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleClearChat}
-                className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-text hover:bg-beige2/70"
-                title="Clear all chat messages"
-              >
-                Clear chat
-              </Button>
-            </motion.div>
-          </div>
+    <div className="mx-auto max-w-7xl space-y-4">
+      <div className="flex items-stretch gap-5">
+        {/* ── Avatar Panel ────────────────────────────────────── */}
+        <div className="relative w-80 shrink-0" style={chatPanelStyle}>
+          <AvatarCanvas
+            isSpeaking={isAssistantSpeaking}
+            className="!h-full !min-h-0 rounded-3xl border border-border shadow-card"
+            style={{ minHeight: 0 }}
+          />
         </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto bg-[#fdf6ec] px-6 py-6">
-          {showMoodSelector && (
-            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
-              <div className="max-w-[80%] rounded-3xl border border-border bg-white/85 px-5 py-4 shadow-soft">
-                <p className="mb-4 text-base font-semibold text-black">What's your mood like today?</p>
-                <div className="flex flex-wrap gap-2">
-                  {moods.map((mood) => (
+        {/* ── Chat Area ──────────────────────────────────────── */}
+        <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-card" style={chatPanelStyle}>
+
+          {/* Chat Header */}
+          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-wellness-sage-500 shadow-glow">
+                <Heart className="h-5 w-5 text-white" fill="currentColor" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-text">Your companion</h2>
+                <p className="text-xs text-muted">Always here to listen</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {isAssistantSpeaking && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => { stopAllSpeech(); setIsAssistantSpeaking(false); }}
+                  className="flex items-center gap-1.5 rounded-xl border border-wellness-sage-200 bg-wellness-sage-50 px-3 py-1.5 text-xs font-semibold text-wellness-sage-700"
+                >
+                  <VolumeX className="h-3.5 w-3.5" />
+                  Stop
+                </motion.button>
+              )}
+              <button
+                onClick={handleClearChat}
+                className="rounded-xl border border-border px-3 py-1.5 text-xs font-semibold text-muted transition hover:bg-surface-alt hover:text-text"
+              >
+                Clear chat
+              </button>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 space-y-3 overflow-y-auto px-6 py-5 bg-[radial-gradient(ellipse_at_top_left,rgba(61,139,122,0.04),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(123,111,173,0.04),transparent_60%)]">
+
+            {/* Mood selector */}
+            {showMoodSelector && (
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
+                <div className="max-w-[85%] rounded-3xl rounded-tl-lg border border-border bg-surface px-5 py-4 shadow-card">
+                  <div className="mb-1 flex items-center gap-2">
+                    <Heart className="h-4 w-4 text-wellness-sage-500" fill="currentColor" />
+                    <span className="text-xs font-semibold text-wellness-sage-600 uppercase tracking-wide">Check-in</span>
+                  </div>
+                  <p className="mb-4 text-sm font-semibold text-text">How are you feeling right now?</p>
+                  <div className="flex flex-wrap gap-2">
+                    {moods.map((mood) => (
+                      <motion.button
+                        key={mood.value}
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => handleMoodSelect(mood.value, mood.label)}
+                        className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-medium text-text transition ${mood.color}`}
+                      >
+                        <span className="text-base">{mood.emoji}</span>
+                        <span>{mood.label}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Crisis Alert */}
+            <AnimatePresence>
+              {showCrisisAlert && (
+                <motion.div
+                  initial={{ opacity: 0, y: -16, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -16, scale: 0.97 }}
+                  className="relative rounded-2xl border-2 border-red-300 bg-gradient-to-r from-red-50 to-orange-50 p-5 shadow-lg"
+                >
+                  <button
+                    onClick={() => setShowCrisisAlert(false)}
+                    className="absolute right-3 top-3 rounded-full p-1 text-red-500 hover:bg-red-100 transition"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <h3 className="mb-2 flex items-center gap-2 text-base font-bold text-red-800">
+                    <Phone className="h-5 w-5" /> Need immediate support?
+                  </h3>
+                  <p className="mb-4 text-sm text-red-700">I'm here, but I'm not a crisis service. If you're in danger, please reach out:</p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    {[
+                      { href: 'tel:999',       label: 'Emergency',           num: '999',       color: 'red' },
+                      { href: 'tel:1767',      label: 'Samaritans of SG',    num: '1767',      color: 'orange' },
+                      { href: 'sms:91511767',  label: 'SOS CareText',        num: '9151 1767', color: 'amber' },
+                    ].map(({ href, label, num, color }) => (
+                      <a
+                        key={href}
+                        href={href}
+                        className={`flex items-center gap-2 rounded-xl border border-${color}-200 bg-white px-3 py-2.5 text-sm font-semibold text-${color}-800 shadow-sm hover:shadow transition`}
+                      >
+                        <Phone className="h-4 w-4 shrink-0" />
+                        <div>
+                          <div>{label}</div>
+                          <div className="text-xs font-bold">{num}</div>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Empty state */}
+            {messages.length === 0 && !showMoodSelector && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mx-auto max-w-md rounded-3xl border border-border bg-surface p-8 text-center shadow-card"
+              >
+                <motion.div
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-wellness-sage-500 shadow-glow"
+                >
+                  <Heart className="h-8 w-8 text-white" fill="currentColor" />
+                </motion.div>
+                <h3 className="mb-2 text-lg font-bold text-text">Hi {user?.name}, I'm here</h3>
+                <p className="mb-6 text-sm text-muted leading-relaxed">
+                  Whether you need to talk, vent, or just take a breath — this space is yours, no judgment.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {suggestedPrompts.map((prompt) => (
                     <motion.button
-                      key={mood.value}
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => handleMoodSelect(mood.value, mood.label)}
-                      className="flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-text transition hover:bg-beige2/70 focus-visible:ring-2 focus-visible:ring-beige1"
+                      key={prompt}
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => setInput(prompt)}
+                      className="rounded-xl border border-border bg-surface-alt px-4 py-2 text-sm font-medium text-text transition hover:border-wellness-sage-300 hover:bg-wellness-sage-50 hover:text-wellness-sage-700"
                     >
-                      <span className="text-lg">{mood.emoji}</span>
-                      <span>{mood.label}</span>
+                      {prompt}
                     </motion.button>
                   ))}
                 </div>
-              </div>
-            </motion.div>
-          )}
-
-          {messages.length === 0 && !showMoodSelector && (
-            <div className="mx-auto max-w-2xl rounded-[28px] border border-border bg-white/90 px-8 py-12 text-center shadow-soft">
-              <motion.div
-                className="mb-6 text-6xl"
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                ??
               </motion.div>
-              <h2 className="mb-3 text-2xl font-semibold text-text">Hi {user?.name}! I'm right here.</h2>
-              <p className="mb-6 text-base text-muted">
-                Whether you need to talk about your day, work through something tough, or just breathe for a moment,
-                this space is yours.
-              </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                {suggestedPrompts.map((prompt) => (
-                  <motion.button
-                    key={prompt}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => handlePromptClick(prompt)}
-                    className="rounded-full border border-border bg-surface px-6 py-3 text-sm font-semibold text-text shadow-soft hover:bg-beige2/70"
-                  >
-                    {prompt}
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-          )}
+            )}
 
-          <AnimatePresence>
-            {messages.map((message, idx) => {
-              const messageId = message._id || message.id;
-              const shouldAutoPlay = autoPlayVoice && messageId === lastMessageId && message.role === 'assistant';
-
-              return (
+            {/* Messages */}
+            <AnimatePresence>
+              {messages.map((msg, idx) => (
                 <MessageBubble
-                  key={messageId || idx}
-                  message={message}
+                  key={msg._id || msg.id || idx}
+                  message={msg}
                   index={idx}
-                  autoPlay={shouldAutoPlay}
+                  autoPlay={false}
                   onSpeechStateChange={setIsAssistantSpeaking}
                 />
-              );
-            })}
-          </AnimatePresence>
+              ))}
+            </AnimatePresence>
 
-          {isLoading && !isRecordingAudio && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-              <div className="rounded-2xl border border-border bg-white/80 px-4 py-3 shadow-soft">
-                <div className="flex space-x-2">
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-brown1/60" />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-brown1/40" style={{ animationDelay: '0.1s' }} />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-brown1/20" style={{ animationDelay: '0.2s' }} />
+            {/* Typing indicator */}
+            {isLoading && !isRecordingAudio && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
+                <div className="mr-2.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wellness-sage-500">
+                  <Heart className="h-4 w-4 text-white" fill="currentColor" />
                 </div>
-              </div>
-            </motion.div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        <div className="border-t border-border/70 bg-[#f3e5d3] px-4 py-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-end gap-3">
-              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.96 }}>
-                <Button
-                  onClick={handleMicClick}
-                  disabled={false}
-                  className={`rounded-2xl px-4 py-3 text-text shadow-soft ${
-                    isRecordingAudio
-                      ? 'bg-[#b58758] text-white'
-                      : 'bg-[var(--beige-1)] text-[#2f2015] hover:brightness-110'
-                  }`}
-                  aria-label={isRecordingAudio ? 'Stop recording' : 'Start recording'}
-                >
-                  {isRecordingAudio ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </Button>
+                <div className="rounded-3xl rounded-tl-lg border border-border bg-surface px-5 py-3.5 shadow-card">
+                  <div className="flex gap-1.5">
+                    {[0, 0.12, 0.24].map((d) => (
+                      <span key={d} className="h-2 w-2 animate-bounce rounded-full bg-wellness-sage-400" style={{ animationDelay: `${d}s` }} />
+                    ))}
+                  </div>
+                </div>
               </motion.div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
 
-              <motion.div whileHover={{ scale: isAssistantSpeaking ? 1.03 : 1 }} whileTap={{ scale: isAssistantSpeaking ? 0.96 : 1 }}>
-                <Button
-                  onClick={handleStopSpeaking}
-                  disabled={!isAssistantSpeaking}
-                  className={`rounded-2xl px-4 py-3 transition ${
-                    isAssistantSpeaking
-                      ? 'bg-[#8b6947] text-white shadow-soft'
-                      : 'cursor-not-allowed border border-border bg-[#eadcc6] text-muted opacity-70'
-                  }`}
-                  aria-label="Stop the assistant from speaking"
-                  title="Stop the assistant from speaking"
-                >
-                  <VolumeX className="w-5 h-5" />
-                </Button>
-              </motion.div>
+          {/* Input Area */}
+          <div className="border-t border-border bg-surface-alt px-4 py-3">
+            <div className="flex items-end gap-2">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleMicClick}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
+                  isRecordingAudio
+                    ? 'border-red-300 bg-red-500 text-white shadow'
+                    : 'border-border bg-surface text-muted hover:border-wellness-sage-300 hover:text-wellness-sage-600'
+                }`}
+                aria-label={isRecordingAudio ? 'Stop recording' : 'Start recording'}
+              >
+                {isRecordingAudio ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </motion.button>
 
               <TextArea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value)}
+                onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
                 }}
-                placeholder={isRecordingAudio ? 'Recording... tap mic to stop' : "Share what's on your mind..."}
-                className="flex-1 min-h-[60px] max-h-[120px] rounded-2xl border border-border bg-white/90 px-4 py-3 text-[#2f2015] placeholder:text-[#a88866] placeholder:opacity-90 focus:border-[var(--beige-1)] focus:ring-2 focus:ring-[var(--beige-1)]"
+                placeholder={isRecordingAudio ? 'Recording… tap mic to stop' : "Share what's on your mind…"}
+                className="min-h-[42px] max-h-[120px] flex-1 resize-none rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-muted focus:border-wellness-sage-400 focus:ring-1 focus:ring-wellness-sage-400"
                 disabled={isLoading || isRecordingAudio}
               />
-              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.96 }}>
-                <Button
-                  onClick={() => handleSend()}
-                  disabled={!input.trim() || isLoading || isRecordingAudio}
-                  isLoading={isLoading && !isRecordingAudio}
-                  className="rounded-2xl bg-[var(--beige-1)] px-6 py-3 font-semibold text-[#2f2015] shadow-soft transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Send className="w-5 h-5" />
-                </Button>
-              </motion.div>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleSend()}
+                disabled={!input.trim() || isLoading || isRecordingAudio}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-wellness-sage-500 text-white shadow-glow transition hover:bg-wellness-sage-600 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Send message"
+              >
+                <Send className="h-4 w-4" />
+              </motion.button>
             </div>
-            <p className="text-xs text-muted">
-              {voiceEnabled
-                ? 'Press Enter to send, Shift+Enter for a new line, or use the mic to record.'
-                : 'Press Enter to send, Shift+Enter for a new line.'}
+            <p className="mt-1.5 text-center text-[0.65rem] text-muted">
+              Press Enter to send · Shift+Enter for new line
+              {voiceEnabled && ' · Mic for voice input'}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-3xl border border-border bg-surface px-5 py-4 shadow-soft">
-        <p className="text-sm text-muted">
-          <strong className="text-text">Important:</strong> I'm here to support you, but I'm not a crisis service. If
-          you're in immediate danger, please call <strong>Emergency 999</strong> or contact{' '}
-          <strong>Samaritans of Singapore at 1767</strong>.
+      {/* Disclaimer */}
+      <div className="flex items-start gap-2 rounded-2xl border border-wellness-sage-100 bg-wellness-sage-50 px-5 py-3.5">
+        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-wellness-sage-500" />
+        <p className="text-xs text-wellness-sage-700">
+          <strong>Remember:</strong> I'm a support companion, not a crisis service. For immediate danger, call <strong>999</strong> or contact Samaritans of Singapore at <strong>1767</strong>.
         </p>
       </div>
+
     </div>
   );
 };

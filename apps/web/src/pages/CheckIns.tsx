@@ -1,9 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Button, TextArea, Card, CardHeader, CardTitle, CardContent } from '@talkitout/ui';
+import { Button, TextArea } from '@talkitout/ui'; // eslint-disable-line
 import { checkInAPI } from '../api/client';
 import toast from 'react-hot-toast';
 import { formatRelativeTime } from '@talkitout/ui';
+import { Heart, CalendarHeart, Sparkles } from 'lucide-react';
+import { SectionHeader } from '../components/SectionHeader';
+
+const moods = [
+  { value: 1, emoji: '😢', label: 'Very low',    ring: 'border-wellness-lavender-300 ring-wellness-lavender-200', bg: 'bg-wellness-lavender-50' },
+  { value: 2, emoji: '😕', label: 'Not great',   ring: 'border-wellness-peach-300 ring-wellness-peach-200',       bg: 'bg-wellness-peach-50' },
+  { value: 3, emoji: '😐', label: 'Okay',         ring: 'border-wellness-sky-300 ring-wellness-sky-200',           bg: 'bg-wellness-sky-50' },
+  { value: 4, emoji: '🙂', label: 'Good',         ring: 'border-wellness-sage-300 ring-wellness-sage-200',         bg: 'bg-wellness-sage-50' },
+  { value: 5, emoji: '😄', label: 'Great!',       ring: 'border-wellness-sage-400 ring-wellness-sage-300',         bg: 'bg-wellness-sage-100' },
+];
 
 export const CheckInsPage: React.FC = () => {
   const [checkIns, setCheckIns] = useState<any[]>([]);
@@ -11,161 +21,137 @@ export const CheckInsPage: React.FC = () => {
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadCheckIns();
-  }, []);
+  useEffect(() => { loadCheckIns(); }, []);
 
   const loadCheckIns = async () => {
     try {
-      const response = await checkInAPI.getMine({ days: 30 });
-      setCheckIns(response.data.checkIns);
-    } catch (error) {
-      toast.error('Failed to load check-ins');
-    }
+      const res = await checkInAPI.getMine({ days: 30 });
+      setCheckIns(res.data.checkIns);
+    } catch { toast.error('Failed to load check-ins'); }
   };
 
   const handleSubmit = async () => {
-    if (!mood) {
-      toast.error('Please select a mood');
-      return;
-    }
-
+    if (!mood) { toast.error('Please select a mood'); return; }
     setIsSubmitting(true);
     try {
       await checkInAPI.create({ mood, note: note || undefined });
-      toast.success('Check-in saved!');
+      toast.success('Check-in saved! 💚');
       setMood(null);
       setNote('');
       loadCheckIns();
-    } catch (error) {
-      toast.error('Failed to save check-in');
-    } finally {
-      setIsSubmitting(false);
-    }
+    } catch { toast.error('Failed to save check-in'); }
+    finally { setIsSubmitting(false); }
   };
 
-  const moods = [
-    { value: 1, emoji: '😢', label: 'Very Bad' },
-    { value: 2, emoji: '😟', label: 'Bad' },
-    { value: 3, emoji: '😐', label: 'Okay' },
-    { value: 4, emoji: '🙂', label: 'Good' },
-    { value: 5, emoji: '😄', label: 'Great' },
-  ];
+  const selectedMood = moods.find((m) => m.value === mood);
 
   return (
-    <div className="w-full space-y-6">
-      {/* Warm Welcome */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-6"
-      >
-        <h1 className="text-3xl font-extrabold tracking-tight text-ti-ink-900 mb-3 flex items-center justify-center">
-          <span className="mr-2">❤️</span> How are you feeling?
-        </h1>
-        <p className="text-lg text-ti-ink/70 max-w-2xl mx-auto">
-          Taking a moment to check in with yourself is important. I'm here to listen.
-        </p>
+    <div className="mx-auto max-w-3xl space-y-8">
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-wellness-sage-500 shadow-glow">
+          <Heart className="h-7 w-7 text-white" fill="currentColor" />
+        </div>
+        <h1 className="text-2xl font-bold text-text">How are you feeling?</h1>
+        <p className="mt-2 text-sm text-muted">Checking in with yourself is a small act of self-care.</p>
       </motion.div>
 
-      <Card className="mb-6 bg-gradient-to-br from-ti-green-500/5 to-white border-2 border-ti-beige-300 shadow-card rounded-3xl">
-        <CardContent className="pt-8">
-          <div className="flex justify-center gap-4 mb-8">
-            {moods.map((m) => (
-              <motion.button
-                key={m.value}
-                whileHover={{ scale: 1.15, y: -8 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setMood(m.value)}
-                className={`flex flex-col items-center p-6 rounded-2xl border-3 transition-all ${
-                  mood === m.value
-                    ? 'border-ti-green-500 bg-gradient-to-br from-ti-green-500/20 to-ti-teal-500/20 shadow-lg ring-2 ring-ti-green-500/50'
-                    : 'border-ti-beige-300 hover:border-ti-green-300 bg-white shadow-md'
-                }`}
-              >
-                <div className="text-6xl mb-3">{m.emoji}</div>
-                <span className="text-sm font-semibold text-ti-ink-900">{m.label}</span>
-              </motion.button>
-            ))}
-          </div>
+      {/* Mood selector card */}
+      <div className="card-wellness p-6">
+        <p className="mb-5 text-sm font-semibold text-text">Select your mood right now:</p>
+        <div className="flex justify-center gap-3 mb-6">
+          {moods.map((m) => (
+            <motion.button
+              key={m.value}
+              whileHover={{ scale: 1.1, y: -4 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => setMood(m.value)}
+              className={`flex flex-col items-center gap-2 rounded-2xl border-2 px-5 py-4 transition-all ${
+                mood === m.value
+                  ? `${m.ring} ${m.bg} ring-2 shadow-card-hover`
+                  : 'border-border bg-surface hover:border-wellness-sage-200'
+              }`}
+            >
+              <span className="text-4xl">{m.emoji}</span>
+              <span className="text-xs font-semibold text-text">{m.label}</span>
+            </motion.button>
+          ))}
+        </div>
 
-          <div className="max-w-2xl mx-auto">
+        {mood && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="space-y-4"
+          >
+            <div className="rounded-xl border border-wellness-sage-100 bg-wellness-sage-50 px-4 py-3 text-sm text-wellness-sage-700">
+              <Sparkles className="mr-1.5 inline h-4 w-4" />
+              {selectedMood?.emoji} You're feeling <strong>{selectedMood?.label?.toLowerCase()}</strong> today.
+              {mood <= 2 && " That's okay — you showed up for yourself."}
+              {mood >= 4 && " Lovely to hear! Keep nurturing that energy."}
+            </div>
+
             <TextArea
-              label="What's on your mind? (optional)"
+              label="Anything on your mind? (optional)"
               value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Share how your day is going..."
-              rows={4}
-              className="bg-ti-beige-50 border-2 border-ti-beige-300 rounded-xl focus:ring-2 focus:ring-ti-green-500"
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNote(e.target.value)}
+              placeholder="What's going on today? No pressure…"
+              rows={3}
             />
-          </div>
 
-          <div className="mt-6 flex justify-center">
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <div className="flex justify-end">
               <Button
                 onClick={handleSubmit}
                 isLoading={isSubmitting}
-                disabled={!mood}
-                size="lg"
-                className="bg-gradient-to-r from-ti-green-500 to-ti-teal-500 text-white shadow-md hover:shadow-lg px-8"
+                className="rounded-xl bg-wellness-sage-500 px-6 py-2.5 font-semibold text-white hover:bg-wellness-sage-600"
               >
-                {mood ? '✓ Save Check-in' : 'Select your mood first'}
+                Save check-in
               </Button>
-            </motion.div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-white border-2 border-ti-beige-300 shadow-card rounded-2xl">
-        <CardHeader>
-          <div className="flex items-center">
-            <span className="text-2xl mr-2">📊</span>
-            <CardTitle className="text-ti-ink-900">Your Journey</CardTitle>
-          </div>
-          <p className="text-sm text-ti-ink/60 mt-1">
-            Track how you've been feeling over time
-          </p>
-        </CardHeader>
-        <CardContent>
-          {checkIns.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-5xl mb-4">📝</div>
-              <p className="text-ti-ink/60 mb-4">
-                No check-ins yet. Log your first one above!
-              </p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {checkIns.map((checkIn, idx) => (
+          </motion.div>
+        )}
+
+        {!mood && (
+          <p className="text-center text-xs text-muted">Tap a mood above to continue</p>
+        )}
+      </div>
+
+      {/* History */}
+      <div className="card-wellness p-6">
+        <SectionHeader icon={CalendarHeart} title="Your mood history" description="Last 30 days" />
+
+        {checkIns.length === 0 ? (
+          <div className="py-10 text-center">
+            <p className="text-sm text-muted">No check-ins yet. Your first one is above! 💚</p>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {checkIns.map((ci, idx) => {
+              const m = moods.find((m) => m.value === ci.mood);
+              return (
                 <motion.div
-                  key={checkIn._id}
-                  initial={{ opacity: 0, x: -20 }}
+                  key={ci._id}
+                  initial={{ opacity: 0, x: -16 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="flex items-start space-x-4 p-4 bg-ti-beige-50 rounded-xl border-2 border-ti-beige-200 hover:shadow-md hover:border-ti-green-300 transition-all"
+                  transition={{ delay: idx * 0.04 }}
+                  className="flex items-start gap-3 rounded-xl border border-border bg-surface-alt px-4 py-3 transition hover:border-wellness-sage-200"
                 >
-                  <div className="text-4xl">
-                    {moods.find((m) => m.value === checkIn.mood)?.emoji}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-ti-ink-900">
-                        {moods.find((m) => m.value === checkIn.mood)?.label}
-                      </span>
-                      <span className="text-xs text-ti-ink/60 font-medium">
-                        {formatRelativeTime(checkIn.createdAt)}
-                      </span>
+                  <span className="text-2xl">{m?.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-text">{m?.label}</span>
+                      <span className="shrink-0 text-xs text-muted">{formatRelativeTime(ci.createdAt)}</span>
                     </div>
-                    {checkIn.note && (
-                      <p className="text-sm text-ti-ink-800 leading-relaxed italic">"{checkIn.note}"</p>
+                    {ci.note && (
+                      <p className="mt-1 text-xs text-muted italic leading-relaxed">"{ci.note}"</p>
                     )}
                   </div>
                 </motion.div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

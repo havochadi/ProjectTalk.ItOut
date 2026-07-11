@@ -4,6 +4,7 @@ import { CheckIn } from '../models/CheckIn';
 import { Session } from '../models/Session';
 import { Message } from '../models/Message';
 import { RiskFlag } from '../models/RiskFlag';
+import { Task } from '../models/Task';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
 import { USER_ROLES, FLAG_STATUS } from '@talkitout/lib';
 
@@ -24,6 +25,7 @@ router.get(
 
       // Total users
       const totalStudents = await User.countDocuments({ role: USER_ROLES.STUDENT });
+      const studentIds = await User.find({ role: USER_ROLES.STUDENT }).distinct('_id');
 
       // Active users (checked in or messaged in period)
       const activeCheckIns = await CheckIn.distinct('userId', { createdAt: { $gte: daysAgo } });
@@ -58,11 +60,17 @@ router.get(
       ]);
 
       // Risk metrics
-      const openFlags = await RiskFlag.countDocuments({ status: FLAG_STATUS.OPEN });
-      const recentFlags = await RiskFlag.countDocuments({ createdAt: { $gte: daysAgo } });
+      const openFlags = await RiskFlag.countDocuments({
+        status: FLAG_STATUS.OPEN,
+        userId: { $in: studentIds },
+      });
+      const recentFlags = await RiskFlag.countDocuments({
+        createdAt: { $gte: daysAgo },
+        userId: { $in: studentIds },
+      });
 
       const flagsBySeverity = await RiskFlag.aggregate([
-        { $match: { status: FLAG_STATUS.OPEN } },
+        { $match: { status: FLAG_STATUS.OPEN, userId: { $in: studentIds } } },
         { $group: { _id: '$severity', count: { $sum: 1 } } },
       ]);
 
@@ -136,19 +144,12 @@ router.get(
 
       const lastCheckIn = checkIns.length > 0 ? checkIns[checkIns.length - 1].createdAt : null;
 
-      // Task metrics (placeholder - add Task model import if exists)
-      const Task = require('../models/Task').Task;
-      let taskMetrics = { total: 0, completed: 0 };
-      try {
-        const allTasks = await Task.find({ userId, createdAt: { $gte: daysAgo } });
-        taskMetrics = {
-          total: allTasks.length,
-          completed: allTasks.filter((t: any) => t.status === 'done').length,
-        };
-      } catch (err) {
-        // Task model might not exist
-        console.log('Task model not found, using default values');
-      }
+      // Task metrics
+      const allTasks = await Task.find({ userId, createdAt: { $gte: daysAgo } });
+      const taskMetrics = {
+        total: allTasks.length,
+        completed: allTasks.filter((task) => task.status === 'done').length,
+      };
 
       // Focus sessions
       const sessions = await Session.find({

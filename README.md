@@ -5,7 +5,7 @@ An AI-powered support system for Singapore students (ages 10-19) that helps with
 ## Features
 
 ### For Students
-- 💬 **AI Chat Companion** - Supportive, non-clinical study companion powered by GPT-4o-mini
+- 💬 **AI Chat Companion** - Supportive, non-clinical study companion powered by Google Gemini
 - 🎯 **Pomodoro Focus Timer** - Interactive focus sessions with breathing exercises
 - ✅ **Task Management** - Kanban-style task board with priorities and due dates
 - ❤️ **Daily Check-ins** - Mood tracking with sentiment analysis and trend visualization
@@ -29,11 +29,11 @@ An AI-powered support system for Singapore students (ages 10-19) that helps with
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React + Vite + TypeScript + Tailwind CSS |
-| UI/Motion | Framer Motion + Recharts |
+| UI/Motion | Framer Motion |
 | Backend | Node.js + Express + TypeScript |
 | Database | MongoDB + Mongoose |
 | Realtime | Socket.IO |
-| AI | OpenAI GPT-4o-mini |
+| AI | Google Gemini |
 | Auth | JWT (access + refresh tokens) |
 | Security | Helmet, CORS, Rate Limiting |
 
@@ -43,8 +43,7 @@ An AI-powered support system for Singapore students (ages 10-19) that helps with
 talkitout/
 ├── apps/
 │   ├── api/          # Express backend
-│   ├── web/          # React frontend
-│   └── mobile/       # Expo React Native (future)
+│   └── web/          # React frontend
 ├── packages/
 │   ├── ui/           # Design system components
 │   └── lib/          # Shared utilities & types
@@ -61,14 +60,14 @@ talkitout/
 - Node.js 18+
 - npm 9+
 - Docker & Docker Compose (optional)
-- OpenAI API key
+- Google Gemini API key
 
 ### 1. Clone and Install
 
 ```bash
 git clone <repository-url>
 cd TalkItOut
-npm install
+npm ci
 ```
 
 ### 2. Configure Environment
@@ -78,8 +77,8 @@ npm install
 cp .env.example .env
 cp apps/web/.env.example apps/web/.env
 
-# Edit .env and add your OpenAI API key
-# OPENAI_API_KEY=sk-...
+# Edit .env and add your Gemini API key
+# GEMINI_API_KEY=...
 ```
 
 ### 3. Start with Docker (Recommended)

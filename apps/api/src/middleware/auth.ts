@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { UserRole, USER_ROLES } from '@talkitout/lib';
+import { UserRole } from '@talkitout/lib';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change_me';
 

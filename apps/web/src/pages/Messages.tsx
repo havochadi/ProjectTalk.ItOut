@@ -146,8 +146,8 @@ export const MessagesPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ti-green-600 mx-auto mb-4" />
-          <p className="text-ti-ink/70">Loading messages...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-wellness-sage-400 mx-auto mb-4" />
+          <p className="text-muted">Loading messages...</p>
         </div>
       </div>
     );
@@ -156,8 +156,8 @@ export const MessagesPage: React.FC = () => {
   return (
     <div className="w-full max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-extrabold tracking-tight text-ti-ink-900 mb-2">Messages from Counselor</h1>
-        <p className="text-ti-ink/70">
+        <h1 className="text-3xl font-extrabold tracking-tight text-text mb-2">Messages from Counselor</h1>
+        <p className="text-muted">
           {unreadCount > 0 ? `You have ${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'All caught up!'}
         </p>
       </div>
@@ -165,9 +165,9 @@ export const MessagesPage: React.FC = () => {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Messages List */}
         <div className="lg:col-span-1">
-          <Card className="bg-white border-ti-beige-300 shadow-card rounded-2xl">
+          <Card className="bg-surface border-border shadow-card rounded-2xl">
             <CardHeader>
-              <CardTitle className="text-ti-ink-900 flex items-center gap-2">
+              <CardTitle className="text-text flex items-center gap-2">
                 <Mail className="w-5 h-5" />
                 Inbox ({messages.length})
               </CardTitle>
@@ -176,8 +176,8 @@ export const MessagesPage: React.FC = () => {
               {messages.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="text-5xl mb-3">📬</div>
-                  <p className="text-ti-ink/70">No messages yet</p>
-                  <p className="text-sm text-ti-ink/50 mt-1">Your counselor hasn't sent you any messages</p>
+                  <p className="text-muted">No messages yet</p>
+                  <p className="text-sm text-muted mt-1">Your counselor hasn't sent you any messages</p>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[600px] overflow-y-auto">
@@ -188,31 +188,31 @@ export const MessagesPage: React.FC = () => {
                       onClick={() => handleMessageClick(message)}
                       className={`p-3 rounded-xl border cursor-pointer transition-all ${
                         selectedMessage?._id === message._id
-                          ? 'bg-ti-green-50 border-ti-green-500 shadow-soft'
+                          ? 'bg-wellness-sage-500 border-wellness-sage-400 shadow-soft'
                           : message.read
-                          ? 'bg-ti-beige-50/50 border-ti-beige-200 hover:border-ti-green-300'
-                          : 'bg-ti-beige-100 border-ti-green-300 hover:border-ti-green-500'
+                          ? 'bg-surface-alt border-border hover:border-wellness-sage-400'
+                          : 'bg-surface-alt border-wellness-sage-400 hover:border-wellness-sage-400'
                       }`}
                     >
                       <div className="flex items-start gap-2">
                         <div className="mt-0.5">
                           {message.read ? (
-                            <MailOpen className="w-4 h-4 text-ti-ink/40" />
+                            <MailOpen className="w-4 h-4 text-muted" />
                           ) : (
-                            <Mail className="w-4 h-4 text-ti-green-600" />
+                            <Mail className="w-4 h-4 text-wellness-sage-500" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`font-medium text-sm ${message.read ? 'text-ti-ink-700' : 'text-ti-ink-900'}`}>
+                            <span className={`font-medium text-sm ${message.read ? 'text-text' : 'text-text'}`}>
                               {message.from.name}
                             </span>
                             {!message.read && <Badge variant="positive" className="text-xs">New</Badge>}
                           </div>
-                          <p className={`text-xs line-clamp-2 ${message.read ? 'text-ti-ink/50' : 'text-ti-ink/70'}`}>
+                          <p className={`text-xs line-clamp-2 ${message.read ? 'text-muted' : 'text-muted'}`}>
                             {message.text}
                           </p>
-                          <p className="text-xs text-ti-ink/40 mt-1">
+                          <p className="text-xs text-muted mt-1">
                             {new Date(message.createdAt).toLocaleDateString()}
                           </p>
                         </div>
@@ -228,23 +228,23 @@ export const MessagesPage: React.FC = () => {
         {/* Message Details */}
         <div className="lg:col-span-2">
           {!selectedMessage ? (
-            <Card className="bg-white border-ti-beige-300 shadow-card rounded-2xl">
+            <Card className="bg-surface border-border shadow-card rounded-2xl">
               <CardContent className="py-16">
                 <div className="text-center">
                   <div className="text-6xl mb-4">💌</div>
-                  <p className="text-ti-ink-800">Select a message to read</p>
+                  <p className="text-text">Select a message to read</p>
                 </div>
               </CardContent>
             </Card>
           ) : (
-            <Card className="bg-white border-ti-beige-300 shadow-card rounded-2xl">
-              <CardHeader className="border-b-2 border-ti-beige-300">
+            <Card className="bg-surface border-border shadow-card rounded-2xl">
+              <CardHeader className="border-b-2 border-border">
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-ti-ink-900 text-xl">
+                    <CardTitle className="text-text text-xl">
                       Conversation with {selectedMessage.from.name}
                     </CardTitle>
-                    <p className="text-sm text-ti-ink/60 mt-1">
+                    <p className="text-sm text-muted mt-1">
                       Started {new Date(selectedMessage.createdAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -255,8 +255,8 @@ export const MessagesPage: React.FC = () => {
                 {/* Conversation Thread */}
                 {isLoadingThread ? (
                   <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ti-green-600 mx-auto mb-2" />
-                    <p className="text-sm text-ti-ink/60">Loading conversation...</p>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-wellness-sage-400 mx-auto mb-2" />
+                    <p className="text-sm text-muted">Loading conversation...</p>
                   </div>
                 ) : (
                   <div className="space-y-4 mb-6 max-h-[400px] overflow-y-auto">
@@ -272,15 +272,15 @@ export const MessagesPage: React.FC = () => {
                           <div
                             className={`max-w-[80%] p-4 rounded-xl ${
                               isFromMe
-                                ? 'bg-ti-green-500 text-white'
-                                : 'bg-ti-beige-100 text-ti-ink-900'
+                                ? 'bg-wellness-sage-500 text-white'
+                                : 'bg-surface-alt text-text'
                             }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-xs font-medium ${isFromMe ? 'text-white/90' : 'text-ti-ink/70'}`}>
+                              <span className={`text-xs font-medium ${isFromMe ? 'text-white/90' : 'text-muted'}`}>
                                 {msg.from.name}
                               </span>
-                              <span className={`text-xs ${isFromMe ? 'text-white/70' : 'text-ti-ink/50'}`}>
+                              <span className={`text-xs ${isFromMe ? 'text-white/70' : 'text-muted'}`}>
                                 {new Date(msg.createdAt).toLocaleString()}
                               </span>
                             </div>
@@ -295,8 +295,8 @@ export const MessagesPage: React.FC = () => {
                 )}
 
                 {/* Reply Section */}
-                <div className="mt-6 pt-6 border-t-2 border-ti-beige-300">
-                  <h3 className="text-sm font-medium text-ti-ink-900 mb-3 flex items-center gap-2">
+                <div className="mt-6 pt-6 border-t-2 border-border">
+                  <h3 className="text-sm font-medium text-text mb-3 flex items-center gap-2">
                     <Send className="w-4 h-4" />
                     Reply to {selectedMessage.from.name}
                   </h3>
@@ -305,14 +305,14 @@ export const MessagesPage: React.FC = () => {
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
                       placeholder="Type your reply..."
-                      className="min-h-[100px] bg-white border-2 border-ti-beige-300 rounded-xl focus:ring-2 focus:ring-ti-green-500 focus:border-ti-green-500"
+                      className="min-h-[100px] bg-surface border border-border rounded-xl focus:ring-2 focus:ring-wellness-sage-400 focus:border-wellness-sage-400"
                     />
                     <div className="flex justify-end">
                       <Button
                         onClick={handleSendReply}
                         disabled={!replyText.trim() || isSendingReply}
                         isLoading={isSendingReply}
-                        className="bg-gradient-to-r from-ti-green-500 to-ti-teal-500 text-white rounded-xl px-6 shadow-md hover:shadow-lg"
+                        className="bg-[#13111C] text-white rounded-full px-6 hover:bg-wellness-sage-700"
                       >
                         <Send className="w-4 h-4 mr-2" />
                         Send Reply

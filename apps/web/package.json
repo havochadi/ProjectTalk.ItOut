@@ -9,30 +9,25 @@
     "lint": "eslint . --ext ts,tsx"
   },
   "dependencies": {
-    "@talkitout/lib": "*",
     "@talkitout/ui": "*",
+    "axios": "^1.6.2",
+    "framer-motion": "^10.16.16",
+    "lucide-react": "^0.263.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.21.0",
-    "framer-motion": "^10.16.16",
-    "recharts": "^2.10.3",
-    "socket.io-client": "^4.6.1",
-    "axios": "^1.6.2",
-    "zod": "^3.22.4",
     "react-hot-toast": "^2.4.1",
-    "lucide-react": "^0.263.1"
+    "react-router-dom": "^6.21.0",
+    "socket.io-client": "^4.6.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "@vitejs/plugin-react": "^4.2.1",
-    "typescript": "^5.3.3",
-    "vite": "^5.0.8",
-    "tailwindcss": "^3.4.0",
     "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.32",
     "eslint": "^8.55.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.5"
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8"
   }
 }

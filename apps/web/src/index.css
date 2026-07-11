@@ -2,28 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Mindline-inspired Palette ──────────────────────────────────────── */
 :root {
-  --bg: #e8dcc8;
-  --surface: #f7efdf;
-  --text: #2f2015;
-  --muted: #7b6753;
-  --beige-1: #caa177;
-  --beige-2: #e6d4bf;
-  --beige-3: #fdf4e6;
-  --yellow: #f3d18f;
-  --brown-1: #8b6947;
-  --border: #d8c6af;
-  --border-dark: #4a3c2b;
+  /* Core backgrounds */
+  --bg: #F4F4F7;
+  --surface: #FFFFFF;
+  --surface-alt: #EFEFF6;
+
+  /* Typography */
+  --text: #1A1A2E;
+  --muted: #6B6B84;
+
+  /* Brand — violet/purple */
+  --primary: #7B6CF6;
+  --primary-light: #A89EFB;
+  --primary-dark: #5A48E8;
+
+  /* Accent */
+  --lavender: #B06FAD;
+  --lavender-light: #D49DD4;
+  --lavender-pale: #F5EDF8;
+
+  --peach: #F09B6A;
+  --peach-light: #FAD5BC;
+  --peach-pale: #FEF3EB;
+
+  --sage: #9B8AFC;
+  --sage-light: #C4BAFD;
+  --sage-pale: #F0EEFF;
+
+  --sky: #6BA3C4;
+  --sky-pale: #E5F1F8;
+
+  /* Borders & Shadows */
+  --border: #E2E0F0;
+  --border-dark: #B8B4D8;
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
-  --shadow-soft: 0 10px 40px rgba(43, 31, 20, 0.18);
+  --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.06);
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.05);
+
+  /* Status */
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --danger: #EF4444;
 }
 
 :root.dark {
-  --bg: #b8a488;
-  --surface: #a48c6d;
-  --text: #fef9f2;
-  --muted: #ebddcd;
+  --bg: #13111C;
+  --surface: #1E1B2E;
+  --surface-alt: #252238;
+  --text: #EAE8FF;
+  --muted: #9B99B8;
+  --border: #2E2B48;
+  --border-dark: #3D3A60;
 }
 
 *,
@@ -40,10 +72,10 @@ body,
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
   color: var(--text);
-  line-height: 1.6;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -55,17 +87,17 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--beige-1);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--surface);
+  background: var(--surface-alt);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -74,7 +106,39 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--beige-1);
+  background: var(--primary-light);
+}
+
+/* ─── Utility Classes ────────────────────────────────────────────────── */
+.card-wellness {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
+}
+
+.btn-primary {
+  background: #13111C;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.6rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 200ms ease, transform 100ms ease;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.gradient-wellness {
+  background: #F4F4F7;
+}
+
+.gradient-hero {
+  background: radial-gradient(ellipse at 20% 20%, rgba(123, 108, 246, 0.10), transparent 55%),
+              radial-gradient(ellipse at 80% 10%, rgba(176, 111, 173, 0.07), transparent 50%),
+              radial-gradient(ellipse at 60% 90%, rgba(107, 163, 196, 0.06), transparent 45%);
 }
 
 @media (prefers-reduced-motion: reduce) {

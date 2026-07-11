@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Headphones, Palette, Shield, Timer } from 'lucide-react';
+import { Headphones, Palette, Shield, Timer, Moon, Sun } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -8,7 +8,6 @@ import { getUserPreferences, saveUserPreferences } from '../store/userPrefs';
 import { getVoiceConfig, isVoiceEnabled } from '../lib/voiceClient';
 import { Card } from '../components/Card';
 import { Toggle } from '../components/Toggle';
-import { ColorSwatch } from '../components/ColorSwatch';
 import { Slider } from '../components/Slider';
 import { SectionHeader } from '../components/SectionHeader';
 
@@ -19,47 +18,27 @@ interface PomodoroSettings {
   cyclesBeforeLongBreak: number;
 }
 
-const accentOptions = [
-  { color: '#d4c4a8', label: 'Classic' },
-  { color: '#c6b197', label: 'Warm Sand' },
-  { color: '#deb998', label: 'Sunset' },
-  { color: '#bba58f', label: 'Cocoa' },
-];
-
 const inputClass =
-  'w-full bg-bg text-text border border-border dark:border-borderDark rounded-xl px-4 py-3 placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[var(--beige-1)] transition-shadow';
+  'w-full bg-surface text-text border border-border rounded-xl px-4 py-2.5 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-wellness-sage-400 focus:border-wellness-sage-400 transition';
 
-const primaryButtonClass =
-  'inline-flex items-center justify-center rounded-full bg-[var(--beige-1)] px-6 py-3 text-base font-semibold text-black shadow-soft transition duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-black/40';
+const btnPrimary =
+  'inline-flex items-center justify-center rounded-full bg-[#13111C] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-wellness-sage-700 focus-visible:ring-2 focus-visible:ring-wellness-sage-400';
 
-const secondaryButtonClass =
-  'inline-flex items-center justify-center rounded-full border border-border px-6 py-3 text-base font-semibold text-text bg-surface transition duration-200 hover:bg-beige2/60 focus-visible:ring-2 focus-visible:ring-beige1';
+const btnSecondary =
+  'inline-flex items-center justify-center rounded-full border border-border bg-surface px-5 py-2.5 text-sm font-semibold text-text transition hover:bg-surface-alt focus-visible:ring-2 focus-visible:ring-wellness-sage-400';
 
 export const SettingsPage: React.FC = () => {
   const { profile, refreshUser } = useAuth();
-  const { darkMode, toggleDarkMode, accentColor, setAccentColor } = useTheme();
+  const { darkMode, toggleDarkMode } = useTheme();
   const [pomodoro, setPomodoro] = useState<PomodoroSettings>(
-    profile?.preferences?.pomodoro || {
-      focusDuration: 25,
-      breakDuration: 5,
-      longBreakDuration: 15,
-      cyclesBeforeLongBreak: 4,
-    }
+    profile?.preferences?.pomodoro || { focusDuration: 25, breakDuration: 5, longBreakDuration: 15, cyclesBeforeLongBreak: 4 }
   );
   const [voicePrefs, setVoicePrefs] = useState(getUserPreferences());
-  const [voiceConfig, setVoiceConfig] = useState({
-    enabled: false,
-    defaultVoiceId: 'Rachel',
-    maxRecordingSeconds: 60,
-  });
+  const [voiceConfig, setVoiceConfig] = useState({ enabled: false, defaultVoiceId: 'Rachel', maxRecordingSeconds: 60 });
 
   useEffect(() => {
-    const config = getVoiceConfig();
-    setVoiceConfig({
-      enabled: isVoiceEnabled(),
-      defaultVoiceId: config.defaultVoiceId || 'Rachel',
-      maxRecordingSeconds: config.maxRecordingSeconds || 60,
-    });
+    const cfg = getVoiceConfig();
+    setVoiceConfig({ enabled: isVoiceEnabled(), defaultVoiceId: cfg.defaultVoiceId || 'Rachel', maxRecordingSeconds: cfg.maxRecordingSeconds || 60 });
   }, []);
 
   const handleUpdatePomodoro = async () => {
@@ -67,186 +46,100 @@ export const SettingsPage: React.FC = () => {
       await userAPI.updateProfile({ preferences: { pomodoro } });
       await refreshUser();
       toast.success('Focus settings saved.');
-    } catch (error) {
-      toast.error('Failed to save settings');
-    }
+    } catch { toast.error('Failed to save settings'); }
   };
 
   const handleUpdateVoiceSettings = () => {
-    try {
-      saveUserPreferences(voicePrefs);
-      toast.success('Voice settings saved.');
-    } catch (error) {
-      toast.error('Failed to save voice settings');
-    }
+    try { saveUserPreferences(voicePrefs); toast.success('Voice settings saved.'); }
+    catch { toast.error('Failed to save voice settings'); }
   };
 
   const handleExportData = async () => {
     try {
-      const response = await privacyAPI.exportData();
-      const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
+      const res = await privacyAPI.exportData();
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `talkio-data-${Date.now()}.json`;
+      a.href = url; a.download = `talkitout-data-${Date.now()}.json`;
       a.click();
       toast.success('Data exported!');
-    } catch (error) {
-      toast.error('Failed to export data');
-    }
+    } catch { toast.error('Failed to export data'); }
   };
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <p className="text-sm font-medium uppercase tracking-wide text-muted">Settings</p>
-        <h1 className="text-3xl font-semibold text-text">Personalize Talk.IO</h1>
-        <p className="text-base text-muted">
-          Tune the assistant experience, focus flows, and voice controls so the app feels made for you.
-        </p>
+    <div className="mx-auto max-w-3xl space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-text">Settings</h1>
+        <p className="mt-1 text-sm text-muted">Personalise your Talk.ItOut experience.</p>
       </div>
 
-      <div className="grid gap-6">
-        <Card className="space-y-6">
-          <SectionHeader
-            icon={Palette}
-            title="Theme & mood"
-            description="Switch between cozy light and cinematic dark, then pick an accent that feels right."
-          />
-          <Toggle isOn={darkMode} onToggle={toggleDarkMode} label="Dark mode" />
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {accentOptions.map((option) => (
-              <ColorSwatch
-                key={option.color}
-                color={option.color}
-                label={option.label}
-                isActive={accentColor === option.color}
-                onSelect={setAccentColor}
-              />
-            ))}
+      {/* Appearance */}
+      <Card className="space-y-5 p-6">
+        <SectionHeader icon={Palette} title="Appearance" description="Choose the theme that feels most comfortable." />
+        <div className="flex items-center justify-between rounded-xl border border-border bg-surface-alt px-4 py-3">
+          <div className="flex items-center gap-2">
+            {darkMode ? <Moon className="h-4 w-4 text-wellness-lavender-500" /> : <Sun className="h-4 w-4 text-wellness-peach-500" />}
+            <span className="text-sm font-medium text-text">Dark mode</span>
           </div>
-        </Card>
+          <Toggle isOn={darkMode} onToggle={toggleDarkMode} label="" />
+        </div>
+      </Card>
 
-        <Card className="space-y-6">
-          <SectionHeader
-            icon={Timer}
-            title="Focus timer"
-            description="Adjust your Pomodoro cycle. Sliders update the durations instantly."
-          />
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-4">
-              <Slider
-                label={`Focus (${pomodoro.focusDuration} min)`}
-                min={15}
-                max={60}
-                step={5}
-                value={pomodoro.focusDuration}
-                onChange={(e) =>
-                  setPomodoro((prev) => ({ ...prev, focusDuration: Number(e.target.value) }))
-                }
-              />
-              <Slider
-                label={`Short break (${pomodoro.breakDuration} min)`}
-                min={3}
-                max={20}
-                step={1}
-                value={pomodoro.breakDuration}
-                onChange={(e) =>
-                  setPomodoro((prev) => ({ ...prev, breakDuration: Number(e.target.value) }))
-                }
-              />
-            </div>
-            <div className="space-y-4">
-              <Slider
-                label={`Long break (${pomodoro.longBreakDuration} min)`}
-                min={10}
-                max={40}
-                step={5}
-                value={pomodoro.longBreakDuration}
-                onChange={(e) =>
-                  setPomodoro((prev) => ({ ...prev, longBreakDuration: Number(e.target.value) }))
-                }
-              />
-              <Slider
-                label={`Cycles before long break (${pomodoro.cyclesBeforeLongBreak})`}
-                min={2}
-                max={8}
-                step={1}
-                value={pomodoro.cyclesBeforeLongBreak}
-                onChange={(e) =>
-                  setPomodoro((prev) => ({ ...prev, cyclesBeforeLongBreak: Number(e.target.value) }))
-                }
-              />
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={handleUpdatePomodoro} className={primaryButtonClass}>
-              Save focus plan
-            </button>
-          </div>
-        </Card>
+      {/* Focus Timer */}
+      <Card className="space-y-5 p-6">
+        <SectionHeader icon={Timer} title="Focus timer" description="Adjust your Pomodoro session lengths." />
+        <div className="grid gap-5 md:grid-cols-2">
+          <Slider label={`Focus — ${pomodoro.focusDuration} min`} min={15} max={60} step={5} value={pomodoro.focusDuration}
+            onChange={(e) => setPomodoro((p) => ({ ...p, focusDuration: +e.target.value }))} />
+          <Slider label={`Short break — ${pomodoro.breakDuration} min`} min={3} max={20} step={1} value={pomodoro.breakDuration}
+            onChange={(e) => setPomodoro((p) => ({ ...p, breakDuration: +e.target.value }))} />
+          <Slider label={`Long break — ${pomodoro.longBreakDuration} min`} min={10} max={40} step={5} value={pomodoro.longBreakDuration}
+            onChange={(e) => setPomodoro((p) => ({ ...p, longBreakDuration: +e.target.value }))} />
+          <Slider label={`Cycles before long break — ${pomodoro.cyclesBeforeLongBreak}`} min={2} max={8} step={1} value={pomodoro.cyclesBeforeLongBreak}
+            onChange={(e) => setPomodoro((p) => ({ ...p, cyclesBeforeLongBreak: +e.target.value }))} />
+        </div>
+        <button type="button" onClick={handleUpdatePomodoro} className={btnPrimary}>Save focus settings</button>
+      </Card>
 
-        <Card className="space-y-6">
-          <SectionHeader
-            icon={Headphones}
-            title="Voice & playback"
-            description={
-              voiceConfig.enabled
-                ? 'Auto narrate responses or keep things quiet. Your accent preference is remembered per device.'
-                : 'Voice replies are not available right now, but you can still manage your preference.'
-            }
-          />
-          <Toggle
-            isOn={voicePrefs.autoPlayVoice}
-            onToggle={() => setVoicePrefs((prev) => ({ ...prev, autoPlayVoice: !prev.autoPlayVoice }))}
-            label="Auto-play assistant replies"
-            disabled={!voiceConfig.enabled}
-          />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-muted">Preferred voice ID</span>
-              <input
-                className={inputClass}
-                value={voicePrefs.voiceId}
-                onChange={(e) => setVoicePrefs((prev) => ({ ...prev, voiceId: e.target.value }))}
-                placeholder="Rachel"
-              />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-muted">Max recording seconds</span>
-              <input
-                className={inputClass}
-                disabled
-                value={voiceConfig.maxRecordingSeconds}
-                readOnly
-              />
-            </label>
+      {/* Voice */}
+      <Card className="space-y-5 p-6">
+        <SectionHeader icon={Headphones} title="Voice & playback"
+          description={voiceConfig.enabled
+            ? 'Manage how the companion speaks to you.'
+            : 'Voice is not configured — contact your admin to enable it.'} />
+        <div className="rounded-xl border border-border bg-surface-alt px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-text">Auto-play assistant replies</span>
+            <Toggle isOn={voicePrefs.autoPlayVoice} onToggle={() => setVoicePrefs((p) => ({ ...p, autoPlayVoice: !p.autoPlayVoice }))}
+              label="" disabled={!voiceConfig.enabled} />
           </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={handleUpdateVoiceSettings}
-              className={primaryButtonClass}
-              disabled={!voiceConfig.enabled}
-            >
-              Save voice settings
-            </button>
-          </div>
-        </Card>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">Voice ID</span>
+            <input className={inputClass} value={voicePrefs.voiceId}
+              onChange={(e) => setVoicePrefs((p) => ({ ...p, voiceId: e.target.value }))} placeholder="Rachel" />
+          </label>
+          <label className="space-y-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">Max recording (s)</span>
+            <input className={inputClass} disabled value={voiceConfig.maxRecordingSeconds} readOnly />
+          </label>
+        </div>
+        <button type="button" onClick={handleUpdateVoiceSettings} className={btnPrimary} disabled={!voiceConfig.enabled}>
+          Save voice settings
+        </button>
+      </Card>
 
-        <Card className="space-y-4">
-          <SectionHeader
-            icon={Shield}
-            title="Privacy & data"
-            description="Export a full copy of your data anytime. Files are delivered in JSON format."
-          />
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={handleExportData} className={secondaryButtonClass}>
-              Export my data
-            </button>
-          </div>
-        </Card>
-      </div>
+      {/* Privacy */}
+      <Card className="space-y-5 p-6">
+        <SectionHeader icon={Shield} title="Privacy & data" description="Download a full copy of your data (JSON format)." />
+        <div className="rounded-xl border border-wellness-sage-100 bg-wellness-sage-50 px-4 py-3">
+          <p className="text-xs text-wellness-sage-700">
+            Your data is pseudonymized before leaving our systems. Export includes chat history, check-ins, tasks, and profile.
+          </p>
+        </div>
+        <button type="button" onClick={handleExportData} className={btnSecondary}>Export my data</button>
+      </Card>
     </div>
   );
 };

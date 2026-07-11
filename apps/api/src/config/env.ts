@@ -1,19 +1,31 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
-// Load .env file from the api directory
-const envPath = path.resolve(process.cwd(), '.env');
-const result = dotenv.config({ path: envPath, override: true });
+const apiRootDir = path.resolve(__dirname, '../..');
+const workspaceRootDir = path.resolve(apiRootDir, '../..');
+const apiEnvPath = path.resolve(apiRootDir, '.env');
+const workspaceEnvPath = path.resolve(workspaceRootDir, '.env');
 
-if (result.error) {
-  console.error('Error loading .env file:', result.error);
-} else {
-  console.log('✓ .env file loaded successfully');
+function loadEnvFile(envPath: string, override: boolean) {
+  if (!fs.existsSync(envPath)) {
+    return false;
+  }
+
+  const result = dotenv.config({ path: envPath, override });
+  if (result.error) {
+    console.error(`Error loading .env file at ${envPath}:`, result.error);
+    return false;
+  }
+
+  console.log(`✓ .env loaded from: ${envPath}`);
+  return true;
 }
 
-// Debug: Log if GEMINI_API_KEY is loaded
-console.log('Environment check:', {
-  hasGeminiKey: !!process.env.GEMINI_API_KEY,
-  keyPreview: process.env.GEMINI_API_KEY?.substring(0, 10) + '...' || 'NOT SET',
-  nodeEnv: process.env.NODE_ENV,
-});
+// Prefer apps/api/.env, then fill missing values from workspace root .env
+const loadedApiEnv = loadEnvFile(apiEnvPath, false);
+const loadedWorkspaceEnv = loadEnvFile(workspaceEnvPath, false);
+
+if (!loadedApiEnv && !loadedWorkspaceEnv) {
+  console.warn('⚠️ No .env file found for API configuration');
+}

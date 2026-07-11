@@ -16,11 +16,13 @@ import { CounselorStudentsPage } from './pages/CounselorStudents';
 import { RiskFlagsPage } from './pages/RiskFlags';
 import { MessagesPage } from './pages/Messages';
 import { Layout } from './components/Layout';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ThemeProvider } from './contexts/ThemeContext';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode; counselorOnly?: boolean }> = ({
+const ProtectedRoute: React.FC<{ children: React.ReactNode; counselorOnly?: boolean; studentOnly?: boolean }> = ({
   children,
   counselorOnly = false,
+  studentOnly = false,
 }) => {
   const { user, isLoading } = useAuth();
 
@@ -28,8 +30,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; counselorOnly?: bool
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ti-primary-600 mx-auto mb-4" />
-          <p className="text-ti-text-secondary">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-wellness-sage-500 mx-auto mb-4" />
+          <p className="text-muted text-sm">Loading…</p>
         </div>
       </div>
     );
@@ -41,6 +43,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; counselorOnly?: bool
 
   if (counselorOnly && user.role !== 'counselor' && user.role !== 'admin') {
     return <Navigate to="/app/chat" replace />;
+  }
+
+  if (studentOnly && user.role !== 'student') {
+    return <Navigate to="/counselor" replace />;
   }
 
   return <>{children}</>;
@@ -58,7 +64,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/app"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute studentOnly>
             <Layout />
           </ProtectedRoute>
         }
@@ -100,7 +106,12 @@ const App: React.FC = () => {
         <BrowserRouter>
           <AuthProvider>
             <SocketProvider>
-              <AppRoutes />
+              <ErrorBoundary
+                title="We hit an app error"
+                description="The page can recover without a full refresh. Click try again to continue."
+              >
+                <AppRoutes />
+              </ErrorBoundary>
               <Toaster
                 position="top-right"
                 toastOptions={{

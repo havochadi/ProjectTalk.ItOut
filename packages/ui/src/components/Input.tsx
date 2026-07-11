@@ -12,16 +12,16 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-ti-ink-900 mb-1.5">
+          <label className="block text-sm font-semibold text-[var(--text)] mb-1.5">
             {label}
           </label>
         )}
         <input
           ref={ref}
           className={cn(
-            'flex h-11 w-full rounded-xl border-2 border-ti-beige-300 bg-ti-beige-50 px-4 py-2 text-sm text-ti-ink-900',
-            'placeholder:text-ti-ink/40',
-            'focus:outline-none focus:ring-2 focus:ring-ti-green-500 focus:border-ti-green-500 focus:bg-white',
+            'flex h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)]',
+            'placeholder:text-[var(--muted)] placeholder:font-normal',
+            'focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]',
             'disabled:cursor-not-allowed disabled:opacity-50',
             'transition-all',
             error && 'border-red-500 focus:ring-red-500',
@@ -53,16 +53,16 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-ti-ink-900 mb-1.5">
+          <label className="block text-sm font-semibold text-[var(--text)] mb-1.5">
             {label}
           </label>
         )}
         <textarea
           ref={ref}
           className={cn(
-            'flex min-h-[80px] w-full rounded-xl border-2 border-ti-beige-300 bg-ti-beige-50 px-4 py-3 text-sm text-ti-ink-900',
-            'placeholder:text-ti-ink/40',
-            'focus:outline-none focus:ring-2 focus:ring-ti-green-500 focus:border-ti-green-500 focus:bg-white',
+            'flex min-h-[80px] w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--text)]',
+            'placeholder:text-[var(--muted)] placeholder:font-normal',
+            'focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]',
             'disabled:cursor-not-allowed disabled:opacity-50',
             'transition-all',
             error && 'border-red-500 focus:ring-red-500',

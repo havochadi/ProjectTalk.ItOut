@@ -25,7 +25,16 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Update UI theme to brown/beige color scheme and add risk flag management\n\n- Apply warm brown and beige color palette across entire application\n- Update Tailwind config and CSS variables for consistent theming\n- Fix MongoDB connection with dotenv override for proper environment loading\n- Add delete functionality for risk flags in counselor dashboard\n- Implement DELETE endpoint for risk flags with proper authorization\n- Fix null handling in dashboard metrics and risk flags display\n- Add new RiskFlags page with student grouping and status management\n- Enhance counselor dashboard with improved metrics cards\n- Add voice client and MessageBubble components for chat audio\n- Include voice routes and ElevenLabs service integration\n- Update package dependencies and configurations\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git push)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(find:*)",
+      "Bash(docker compose *)",
+      "Bash(ls -la \"/c/Users/User/OneDrive/Documents/GitHub/ProjectTalk.ItOut\" 2>&1 | head -50)",
+      "Read(//c/Users/User/OneDrive/Documents/GitHub/ProjectTalk.ItOut/**)",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./package.json'\\).workspaces\\)\\)\")",
+      "Bash(cygpath -w \"/c/Users/User/OneDrive/Desktop/ProjectTalk\")",
+      "Bash(cygpath -w \"/c/Users/User/OneDrive/Documents/GitHub/ProjectTalk.ItOut\")",
+      "Bash(robocopy 'C:\\\\Users\\\\User\\\\OneDrive\\\\Desktop\\\\ProjectTalk' 'C:\\\\Users\\\\User\\\\OneDrive\\\\Documents\\\\GitHub\\\\ProjectTalk.ItOut' /E /XD node_modules dist build coverage .git mongo-data .next /XF *.log /NFL /NDL /NJH /MT:8)",
+      "Bash(echo \"ROBOCOPY_EXIT=$?\")"
     ],
     "deny": [],
     "ask": []

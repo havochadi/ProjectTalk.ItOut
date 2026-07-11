@@ -205,9 +205,9 @@ call 999. You can also contact Samaritans of Singapore 1767 or SOS CareText 9151
 
 ### Third-Party APIs
 
-**OpenAI:**
+**Google Gemini:**
 - PII pseudonymization before sending
-- No long-term storage by OpenAI (per policy)
+- External data handling must be reviewed against the active provider terms
 - Fallback if API unavailable
 - Regular audits
 

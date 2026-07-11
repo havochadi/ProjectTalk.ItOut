@@ -6,7 +6,6 @@ import {
   SENTIMENT,
   MOOD_RANGE,
   VALIDATION,
-  MESSAGE_ROLE,
 } from './constants';
 
 // Auth Schemas

@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Header } from './Header';
+import { Phone } from 'lucide-react';
 
 export const Layout: React.FC = () => {
   return (
@@ -9,23 +10,23 @@ export const Layout: React.FC = () => {
       <Header />
       <main className="flex-1 px-4 py-8 md:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeInOut' }}
-          className="mx-auto w-full max-w-6xl space-y-8"
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          className="mx-auto w-full max-w-6xl"
         >
           <Outlet />
         </motion.div>
       </main>
-      <footer className="border-t border-border/70 bg-surface/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-muted md:flex-row md:items-center md:justify-between md:px-8">
-          <p className="font-medium text-text">
-            Crisis Support: Emergency 999 · Samaritans of Singapore 1767 · SOS CareText 9151 1767
-          </p>
-          <p>Talk.IO is a support tool, not a crisis service or medical provider.</p>
+      <footer className="border-t border-border bg-surface">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-xs text-muted md:flex-row md:items-center md:justify-between md:px-8">
+          <div className="flex items-center gap-2 font-medium text-wellness-sage-500">
+            <Phone className="h-3.5 w-3.5" />
+            <span>Crisis Support: Emergency <strong>999</strong> · Samaritans of Singapore <strong>1767</strong> · SOS CareText <strong>9151 1767</strong></span>
+          </div>
+          <p className="text-muted/80">Talk.ItOut is a support tool, not a crisis service or medical provider.</p>
         </div>
       </footer>
     </div>
   );
 };
-

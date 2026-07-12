@@ -129,10 +129,10 @@ export const TasksPage: React.FC = () => {
           const colTasks = tasks.filter((t) => t.status === col.status);
           return (
             <div key={col.status} className={`rounded-2xl border ${col.ring} ${col.color} p-4`}>
-              <div className="mb-4 flex items-center gap-2 border-b border-white/60 pb-3">
+              <div className="mb-4 flex items-center gap-2 border-b border-wellness-neutral-800/15 pb-3">
                 <div className={`h-2.5 w-2.5 rounded-full ${col.dot}`} />
-                <span className="text-sm font-bold text-text">{col.label}</span>
-                <span className="ml-auto rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold text-muted">{colTasks.length}</span>
+                <span className="text-sm font-bold text-wellness-neutral-900">{col.label}</span>
+                <span className="ml-auto rounded-full bg-white/90 px-2 py-0.5 text-xs font-bold text-wellness-neutral-700 shadow-sm">{colTasks.length}</span>
               </div>
 
               <div className="space-y-3 min-h-[80px]">
@@ -185,8 +185,8 @@ export const TasksPage: React.FC = () => {
                 ))}
 
                 {colTasks.length === 0 && (
-                  <div className="flex items-center justify-center rounded-xl border border-dashed border-border/60 py-6">
-                    <span className="text-xs text-muted">No tasks here</span>
+                  <div className="flex items-center justify-center rounded-xl border border-dashed border-wellness-neutral-700/30 bg-white/20 py-6">
+                    <span className="text-xs font-medium text-wellness-neutral-700">No tasks here</span>
                   </div>
                 )}
               </div>

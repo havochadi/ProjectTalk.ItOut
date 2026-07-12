@@ -13,11 +13,11 @@ import {
 } from '../lib/voiceClient';
 
 const moods = [
-  { value: 5, emoji: '😄', label: 'Great!',      color: 'border-wellness-sage-300 hover:bg-wellness-sage-50' },
-  { value: 4, emoji: '😊', label: 'Pretty good', color: 'border-wellness-sage-200 hover:bg-wellness-sage-50' },
-  { value: 3, emoji: '😐', label: 'Just okay',   color: 'border-wellness-sky-200 hover:bg-wellness-sky-50' },
-  { value: 2, emoji: '😕', label: 'Not great',   color: 'border-wellness-lavender-200 hover:bg-wellness-lavender-50' },
-  { value: 1, emoji: '😰', label: 'Struggling',  color: 'border-wellness-peach-200 hover:bg-wellness-peach-50' },
+  { value: 5, emoji: '😄', label: 'Great!',      color: 'border-wellness-sage-300 hover:bg-wellness-sage-50 hover:text-wellness-sage-900' },
+  { value: 4, emoji: '😊', label: 'Pretty good', color: 'border-wellness-sage-200 hover:bg-wellness-sage-50 hover:text-wellness-sage-900' },
+  { value: 3, emoji: '😐', label: 'Just okay',   color: 'border-wellness-sky-200 hover:bg-wellness-sky-50 hover:text-wellness-sky-900' },
+  { value: 2, emoji: '😕', label: 'Not great',   color: 'border-wellness-lavender-200 hover:bg-wellness-lavender-50 hover:text-wellness-lavender-900' },
+  { value: 1, emoji: '😰', label: 'Struggling',  color: 'border-wellness-peach-200 hover:bg-wellness-peach-50 hover:text-wellness-peach-900' },
 ];
 
 const suggestedPrompts = [

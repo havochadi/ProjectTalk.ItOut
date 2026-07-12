@@ -59,6 +59,7 @@ function suggestAppFeature(text: string, severity: number) {
 type SchedulerItem = {
   title: string;
   subject?: string;
+  workType: 'homework' | 'revision';
   deadline?: string;
   estimatedMinutes: number;
   importance: number;
@@ -78,7 +79,9 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
       return {
         ...item,
         score,
-        reason: `${item.importance >= 4 ? 'High importance' : 'Moderate importance'}${item.deadline ? ` with a deadline on ${new Date(item.deadline).toLocaleDateString('en-SG')}` : ''}.`,
+        reason: item.workType === 'revision'
+          ? `${item.importance >= 4 ? 'High-priority' : 'Planned'} revision with flexible timing.`
+          : `${item.importance >= 4 ? 'High importance' : 'Moderate importance'}${item.deadline ? ` with a deadline on ${new Date(item.deadline).toLocaleDateString('en-SG')}` : ''}.`,
       };
     })
     .sort((a, b) => b.score - a.score)
@@ -135,6 +138,7 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
       schedule.push({
         title: blocks > 1 ? `${item.title} (${block}/${blocks})` : item.title,
         subject: item.subject || null,
+        workType: item.workType,
         start: cursor!.toISOString(),
         end: end.toISOString(),
         priority: item.importance >= 4 ? 'high' : item.importance >= 3 ? 'med' : 'low',
@@ -244,7 +248,8 @@ Deno.serve(async (request) => {
         .map((item: Record<string, unknown>) => ({
           title: String(item.title || '').trim().slice(0, 500),
           subject: String(item.subject || '').trim().slice(0, 200),
-          deadline: item.deadline ? String(item.deadline) : undefined,
+          workType: item.workType === 'revision' ? 'revision' : 'homework',
+          deadline: item.workType !== 'revision' && item.deadline ? String(item.deadline) : undefined,
           estimatedMinutes: Math.min(720, Math.max(15, Number(item.estimatedMinutes) || 60)),
           importance: Math.min(5, Math.max(1, Number(item.importance) || 3)),
         }))
@@ -253,6 +258,7 @@ Deno.serve(async (request) => {
       if (items.length > 20) return json({ error: 'Schedule up to 20 items at a time.' }, 400);
 
       const plan = buildSmartSchedule(items, body.preferences || {});
+      const hasRevision = items.some((item) => item.workType === 'revision');
       let overview = `Your ${items.length} item${items.length === 1 ? '' : 's'} are ranked by importance, deadline, and estimated effort.`;
       let tips = [
         'Start with the first scheduled block, not the entire workload.',
@@ -269,6 +275,12 @@ Deno.serve(async (request) => {
         if (Array.isArray(generated.tips) && generated.tips.length) tips = generated.tips.slice(0, 3);
       } catch (aiError) {
         console.error('Smart schedule tips failed; using local guidance.', aiError);
+      }
+      if (!hasRevision) {
+        tips = [
+          'There is no revision in this plan yet. Consider adding a short revision topic on one of your free days.',
+          ...tips,
+        ].slice(0, 3);
       }
       return json({ ...plan, overview, tips });
     }

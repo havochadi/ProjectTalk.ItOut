@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarClock, ChevronDown, ChevronUp, Clock, Lightbulb, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { CalendarClock, ChevronDown, ChevronUp, Lightbulb, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { taskAPI } from '../api/client';
 import toast from 'react-hot-toast';
+import { ScheduleTimetable } from './ScheduleTimetable';
 
 type SchedulerInput = {
   id: string;
   title: string;
   subject: string;
+  workType: 'homework' | 'revision';
   deadline: string;
   estimatedMinutes: number;
   importance: number;
@@ -16,6 +18,7 @@ type SchedulerInput = {
 type ScheduleBlock = {
   title: string;
   subject?: string | null;
+  workType?: 'homework' | 'revision';
   start: string;
   end: string;
   priority: 'low' | 'med' | 'high';
@@ -40,6 +43,7 @@ const newItem = (): SchedulerInput => ({
   id: crypto.randomUUID(),
   title: '',
   subject: '',
+  workType: 'homework',
   deadline: '',
   estimatedMinutes: 60,
   importance: 3,
@@ -52,7 +56,7 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
     startDate: new Date().toLocaleDateString('en-CA'),
     weeklyStartTimes: {
       mon: '16:00', tue: '16:00', wed: '16:00', thu: '16:00', fri: '16:00',
-      sat: '10:00', sun: '10:00',
+      sat: '10:00', sun: '',
     } as Record<string, string>,
   });
   const [result, setResult] = useState<ScheduleResult | null>(null);
@@ -60,7 +64,12 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
   const [isCreating, setIsCreating] = useState(false);
 
   const updateItem = (id: string, key: keyof SchedulerInput, value: string | number) => {
-    setItems((current) => current.map((item) => item.id === id ? { ...item, [key]: value } : item));
+    setItems((current) => current.map((item) => {
+      if (item.id !== id) return item;
+      const updated = { ...item, [key]: value };
+      if (key === 'workType' && value === 'revision') updated.deadline = '';
+      return updated;
+    }));
     setResult(null);
   };
 
@@ -98,7 +107,7 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
     try {
       await taskAPI.createMany(result.schedule.map((block) => ({
         title: block.title,
-        subject: block.subject,
+        subject: block.subject || (block.workType === 'revision' ? 'Revision' : 'Homework'),
         dueAt: block.end,
         priority: block.priority,
       })));
@@ -172,14 +181,25 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
                           </button>
                         )}
                       </div>
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <label className="sm:col-span-2 lg:col-span-1">
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                        <label>
+                          <span className="mb-1 block text-xs font-semibold text-white/80">Type of work</span>
+                          <select className={fieldClass} value={item.workType} onChange={(event) => updateItem(item.id, 'workType', event.target.value)}>
+                            <option value="homework">Homework</option>
+                            <option value="revision">Revision</option>
+                          </select>
+                        </label>
+                        <label className="sm:col-span-2 lg:col-span-2">
                           <span className="mb-1 block text-xs font-semibold text-white/80">Task or revision topic</span>
-                          <input className={fieldClass} value={item.title} onChange={(event) => updateItem(item.id, 'title', event.target.value)} placeholder="e.g. Revise algebra chapter 3" />
+                          <input className={fieldClass} value={item.title} onChange={(event) => updateItem(item.id, 'title', event.target.value)} placeholder={item.workType === 'revision' ? 'e.g. Revise algebra chapter 3' : 'e.g. Finish chemistry report'} />
                         </label>
                         <label>
-                          <span className="mb-1 block text-xs font-semibold text-white/80">Due date</span>
-                          <input type="date" className={fieldClass} value={item.deadline} onChange={(event) => updateItem(item.id, 'deadline', event.target.value)} />
+                          <span className="mb-1 block text-xs font-semibold text-white/80">{item.workType === 'revision' ? 'Deadline' : 'Due date'}</span>
+                          {item.workType === 'revision' ? (
+                            <div className="flex min-h-11 items-center rounded-xl border border-[#3A3453] bg-[#191624] px-3 text-xs text-white/45">Flexible — none needed</div>
+                          ) : (
+                            <input type="date" className={fieldClass} value={item.deadline} onChange={(event) => updateItem(item.id, 'deadline', event.target.value)} />
+                          )}
                         </label>
                         <label>
                           <span className="mb-1 block text-xs font-semibold text-white/80">Total time needed</span>
@@ -208,22 +228,44 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
 
               <div className="rounded-xl border border-[#3A3453] bg-[#211D32] p-3 sm:p-4">
                 <h2 className="text-sm font-bold text-white">What time do you want to start?</h2>
-                <p className="mb-3 mt-1 text-xs text-white/55">Set a start time for each day. Clear a day if you want it kept free.</p>
+                <p className="mb-3 mt-1 text-xs text-white/55">Choose study days and when you normally begin. Keep at least one free day.</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-                  {weekDays.map((day) => (
-                    <label key={day.key}>
-                      <span className="mb-1 block text-xs font-semibold text-white/75">{day.label}</span>
-                      <input
-                        type="time"
-                        className={fieldClass}
-                        value={preferences.weeklyStartTimes[day.key] || ''}
-                        onChange={(event) => setPreferences((current) => ({
-                          ...current,
-                          weeklyStartTimes: { ...current.weeklyStartTimes, [day.key]: event.target.value },
-                        }))}
-                      />
-                    </label>
-                  ))}
+                  {weekDays.map((day) => {
+                    const isStudyDay = Boolean(preferences.weeklyStartTimes[day.key]);
+                    return (
+                      <div key={day.key} className={`rounded-xl border p-2.5 transition ${isStudyDay ? 'border-wellness-sage-500/40 bg-[#191624]' : 'border-[#3A3453] bg-[#191624]/60'}`}>
+                        <button
+                          type="button"
+                          onClick={() => setPreferences((current) => ({
+                            ...current,
+                            weeklyStartTimes: {
+                              ...current.weeklyStartTimes,
+                              [day.key]: isStudyDay ? '' : (day.key === 'sat' || day.key === 'sun' ? '10:00' : '16:00'),
+                            },
+                          }))}
+                          className="mb-2 flex min-h-8 w-full items-center justify-between gap-1 text-left"
+                          aria-pressed={isStudyDay}
+                        >
+                          <span className="text-xs font-bold text-white">{day.label}</span>
+                          <span className={`h-2.5 w-2.5 rounded-full ${isStudyDay ? 'bg-wellness-sage-400' : 'bg-white/20'}`} />
+                        </button>
+                        {isStudyDay ? (
+                          <input
+                            type="time"
+                            className={`${fieldClass} px-2 text-xs`}
+                            value={preferences.weeklyStartTimes[day.key]}
+                            aria-label={`${day.label} start time`}
+                            onChange={(event) => setPreferences((current) => ({
+                              ...current,
+                              weeklyStartTimes: { ...current.weeklyStartTimes, [day.key]: event.target.value },
+                            }))}
+                          />
+                        ) : (
+                          <button type="button" onClick={() => setPreferences((current) => ({ ...current, weeklyStartTimes: { ...current.weeklyStartTimes, [day.key]: '16:00' } }))} className="min-h-11 w-full rounded-lg border border-dashed border-white/15 text-xs text-white/35 hover:text-white/70">Free day</button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
                 <p className="mt-3 text-xs leading-relaxed text-white/50">The scheduler automatically limits daily revision, divides longer topics, and adds recovery time to reduce burnout.</p>
               </div>
@@ -275,25 +317,8 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
                   </div>
 
                   <div>
-                    <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-white/55">Weekly schedule</h3>
-                    <div className="space-y-2">
-                      {result.schedule.map((block, index) => (
-                        <div key={`${block.start}-${block.title}`} className="flex flex-col gap-2 rounded-xl border border-[#3A3453] bg-[#13111C] p-3 sm:flex-row sm:items-center">
-                          <div className="flex min-w-[9rem] items-center gap-2 text-xs font-semibold text-wellness-sage-300">
-                            <CalendarClock className="h-4 w-4 shrink-0" />
-                            <span>{new Date(block.start).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-                          </div>
-                          <div className="flex min-w-[7rem] items-center gap-2 text-xs text-white/55">
-                            <Clock className="h-4 w-4 shrink-0" />
-                            <span>{new Date(block.start).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit' })}–{new Date(block.end).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit' })}</span>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="break-words text-sm font-semibold text-white">{index + 1}. {block.title}</p>
-                            <p className="text-xs text-white/55">{block.tip}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-white/55">Weekly timetable</h3>
+                    <ScheduleTimetable blocks={result.schedule} />
                   </div>
 
                   <button

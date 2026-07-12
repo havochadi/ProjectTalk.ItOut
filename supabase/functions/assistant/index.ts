@@ -155,12 +155,20 @@ Deno.serve(async (request) => {
       .reverse()
       .map((item) => `${item.role}: ${item.text}`)
       .join('\n');
-    const responseText = await generateGemini(
-      `You are Talk.ItOut, a supportive, non-clinical study and wellbeing companion for Singapore students aged 10-19. ` +
-        `Use warm, concise language. Never diagnose, claim to be a therapist, or replace professional help. ` +
-        `Offer one or two practical next steps and encourage a trusted adult when distress is significant. ` +
-        `The student's name is ${profile.name}. Risk severity is ${analysis.severity}/3.\n\nConversation:\n${context}\nassistant:`
-    );
+    let responseText: string;
+    try {
+      responseText = await generateGemini(
+        `You are Talk.ItOut, a supportive, non-clinical study and wellbeing companion for Singapore students aged 10-19. ` +
+          `Use warm, concise language. Never diagnose, claim to be a therapist, or replace professional help. ` +
+          `Offer one or two practical next steps and encourage a trusted adult when distress is significant. ` +
+          `The student's name is ${profile.name}. Risk severity is ${analysis.severity}/3.\n\nConversation:\n${context}\nassistant:`
+      );
+    } catch (aiError) {
+      console.error('Gemini response failed; using safe fallback.', aiError);
+      responseText = analysis.severity >= 2
+        ? `I'm glad you reached out, ${profile.name}. That sounds like a lot to carry. Please pause, take a slow breath, and consider telling a trusted adult or school counselor how you're feeling. You don't have to handle this alone.`
+        : `Thanks for sharing that with me, ${profile.name}. I'm having trouble generating a full response right now, but your message has been saved. Try taking one small next step—pause for a breath, write down what feels most important, or talk with someone you trust.`;
+    }
     const safeResponse =
       analysis.severity >= 3 ? `${crisisResources}\n\n${responseText}` : responseText;
 

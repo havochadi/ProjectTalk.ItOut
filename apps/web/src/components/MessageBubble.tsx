@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { formatRelativeTime } from '@talkitout/ui';
-import { Volume2, VolumeX, Loader2, Heart } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Volume2, VolumeX, Loader2, Heart, ArrowRight, CheckSquare, Timer } from 'lucide-react';
 import { speakWithBrowser } from '../lib/voiceClient';
 import toast from 'react-hot-toast';
 
@@ -13,6 +14,12 @@ interface Message {
   sentiment?: string;
   severity?: number;
   createdAt: string | Date;
+  featureSuggestion?: {
+    id: 'tasks' | 'focus';
+    label: string;
+    path: string;
+    description: string;
+  } | null;
 }
 
 interface MessageBubbleProps {
@@ -95,6 +102,23 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           }`}
         >
           <p className="whitespace-pre-wrap text-sm">{message.text}</p>
+          {!isUser && message.featureSuggestion && (
+            <Link
+              to={message.featureSuggestion.path}
+              className="mt-3 flex items-center gap-3 rounded-xl border border-wellness-sage-200 bg-wellness-sage-50 px-3 py-2.5 text-wellness-sage-900 transition hover:border-wellness-sage-300 hover:bg-wellness-sage-100"
+            >
+              {message.featureSuggestion.id === 'tasks'
+                ? <CheckSquare className="h-4 w-4 shrink-0" />
+                : <Timer className="h-4 w-4 shrink-0" />}
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-bold">{message.featureSuggestion.label}</span>
+                <span className="block text-[0.68rem] leading-snug text-wellness-sage-700">
+                  {message.featureSuggestion.description}
+                </span>
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0" />
+            </Link>
+          )}
         </div>
 
         {/* Meta row */}

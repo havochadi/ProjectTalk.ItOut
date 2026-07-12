@@ -31,6 +31,31 @@ function analyzeRisk(text: string) {
   };
 }
 
+function suggestAppFeature(text: string, severity: number) {
+  if (severity >= 3) return null;
+  const normalized = text.toLowerCase();
+  const planningPattern = /\b(homework|assignment|assignments|deadline|deadlines|revision|study plan|schedule|organize|organise|where to start|too much work|workload)\b/;
+  const focusPattern = /\b(burnout|burned out|burnt out|exhausted|drained|cannot focus|can't focus|concentrate|distracted|focus session|need a break)\b/;
+
+  if (planningPattern.test(normalized)) {
+    return {
+      id: 'tasks',
+      label: 'Open To-Do',
+      path: '/app/tasks',
+      description: 'Break your workload into small, manageable tasks.',
+    };
+  }
+  if (focusPattern.test(normalized)) {
+    return {
+      id: 'focus',
+      label: 'Open Focus',
+      path: '/app/focus',
+      description: 'Use a short focus block with a proper break afterward.',
+    };
+  }
+  return null;
+}
+
 async function generateGemini(prompt: string) {
   const apiKey = Deno.env.get('GEMINI_API_KEY');
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured in Supabase secrets');
@@ -118,6 +143,7 @@ Deno.serve(async (request) => {
 
     const text = body.text.trim().slice(0, 20000);
     const analysis = analyzeRisk(text);
+    const featureSuggestion = suggestAppFeature(text, analysis.severity);
     const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('name,role')
@@ -170,6 +196,9 @@ Deno.serve(async (request) => {
           `Do not use the student's name unless it genuinely adds warmth. Ask at most one question. ` +
           `Never diagnose, claim to be a therapist, or replace professional help. ` +
           `Offer only one practical next step. Encourage a trusted adult when distress is significant. ` +
+          (featureSuggestion
+            ? `Naturally recommend the app's ${featureSuggestion.label.replace('Open ', '')} feature as the practical next step. `
+            : '') +
           `The student's name is ${profile.name}. Risk severity is ${analysis.severity}/3.\n\nConversation:\n${context}\nassistant:`
       );
     } catch (aiError) {
@@ -196,7 +225,12 @@ Deno.serve(async (request) => {
         severity: userMessage.severity,
         createdAt: userMessage.created_at,
       },
-      aiMessage: { id: aiMessage.id, text: aiMessage.text, createdAt: aiMessage.created_at },
+      aiMessage: {
+        id: aiMessage.id,
+        text: aiMessage.text,
+        createdAt: aiMessage.created_at,
+        featureSuggestion,
+      },
     });
   } catch (error) {
     console.error(error);

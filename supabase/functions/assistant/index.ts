@@ -164,16 +164,19 @@ Deno.serve(async (request) => {
     try {
       responseText = await generateGemini(
         `You are Talk.ItOut, a supportive, non-clinical study and wellbeing companion for Singapore students aged 10-19. ` +
-          `Use warm, concise language. Reply in no more than 140 words and always finish every sentence and thought. ` +
+          `Sound like a calm, genuine person texting—not a formal counselor or an essay. ` +
+          `Reply in 25 to 60 words, using at most one short paragraph. Always finish every sentence and thought. ` +
+          `Respond directly to what the student said. Do not repeat their message, over-explain, use headings, or begin with canned phrases such as "I hear you" or "Thank you for sharing." ` +
+          `Do not use the student's name unless it genuinely adds warmth. Ask at most one question. ` +
           `Never diagnose, claim to be a therapist, or replace professional help. ` +
-          `Offer one or two practical next steps and encourage a trusted adult when distress is significant. ` +
+          `Offer only one practical next step. Encourage a trusted adult when distress is significant. ` +
           `The student's name is ${profile.name}. Risk severity is ${analysis.severity}/3.\n\nConversation:\n${context}\nassistant:`
       );
     } catch (aiError) {
       console.error('Gemini response failed; using safe fallback.', aiError);
       responseText = analysis.severity >= 2
-        ? `I'm glad you reached out, ${profile.name}. That sounds like a lot to carry. Please pause, take a slow breath, and consider telling a trusted adult or school counselor how you're feeling. You don't have to handle this alone.`
-        : `Thanks for sharing that with me, ${profile.name}. I'm having trouble generating a full response right now, but your message has been saved. Try taking one small next step—pause for a breath, write down what feels most important, or talk with someone you trust.`;
+        ? `That sounds like a lot to carry. Take one slow breath, then consider telling a trusted adult or school counselor what is happening. You don't have to handle it alone.`
+        : `I'm having trouble replying fully right now, but your message was saved. For now, pause for one slow breath and choose the smallest next step you can manage.`;
     }
     const safeResponse =
       analysis.severity >= 3 ? `${crisisResources}\n\n${responseText}` : responseText;

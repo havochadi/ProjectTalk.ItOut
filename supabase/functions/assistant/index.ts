@@ -65,11 +65,9 @@ type SchedulerItem = {
 };
 
 function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, unknown>) {
-  const sessionMinutes = Math.min(120, Math.max(15, Number(preferences.sessionMinutes) || 45));
-  const breakMinutes = Math.min(45, Math.max(5, Number(preferences.breakMinutes) || 10));
-  const dayStart = String(preferences.dayStart || '16:00');
-  const dayEnd = String(preferences.dayEnd || '21:00');
   const startDate = String(preferences.startDate || new Date().toISOString().slice(0, 10));
+  const weeklyStartTimes = (preferences.weeklyStartTimes || {}) as Record<string, string>;
+  const weekdayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
   const rankedItems = items
     .map((item) => {
@@ -89,43 +87,74 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
   const schedule: Array<Record<string, unknown>> = [];
   let dayOffset = 0;
   let cursor: Date | null = null;
+  let blocksToday = 0;
   const dayString = (offset: number) => {
-    const date = new Date(`${startDate}T00:00:00+08:00`);
-    date.setDate(date.getDate() + offset);
-    return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Singapore' });
+    const date = new Date(`${startDate}T12:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + offset);
+    return date.toISOString().slice(0, 10);
   };
-  const startOfDay = (offset: number) => new Date(`${dayString(offset)}T${dayStart}:00+08:00`);
-  const endOfDay = (offset: number) => new Date(`${dayString(offset)}T${dayEnd}:00+08:00`);
+  const dayDetails = (offset: number) => {
+    const dateString = dayString(offset);
+    const day = new Date(`${dateString}T12:00:00Z`).getUTCDay();
+    const startTime = weeklyStartTimes[weekdayKeys[day]];
+    if (!startTime) return null;
+    const start = new Date(`${dateString}T${startTime}:00+08:00`);
+    // Prevent overload: cap revision at 2.5 hours on school days and 3 hours on weekends.
+    const dailyLimitMinutes = day === 0 || day === 6 ? 180 : 150;
+    return { start, end: new Date(start.getTime() + dailyLimitMinutes * 60_000) };
+  };
+  const moveToAvailableDay = () => {
+    for (let attempts = 0; attempts < 14; attempts++) {
+      const details = dayDetails(dayOffset);
+      if (details) {
+        cursor = details.start;
+        blocksToday = 0;
+        return details;
+      }
+      dayOffset++;
+    }
+    throw new Error('Choose a start time for at least one day of the week.');
+  };
 
   for (const item of rankedItems) {
     let remaining = Math.max(15, item.estimatedMinutes);
+    // Automatically vary session length based on effort and importance.
+    const sessionMinutes = remaining <= 45 ? Math.max(25, remaining) : item.importance >= 4 ? 50 : 40;
     const blocks = Math.ceil(remaining / sessionMinutes);
     let block = 1;
     while (remaining > 0) {
-      if (!cursor) cursor = startOfDay(dayOffset);
+      let details = dayDetails(dayOffset);
+      if (!cursor || !details) details = moveToAvailableDay();
       const blockMinutes = Math.min(sessionMinutes, remaining);
-      let end = new Date(cursor.getTime() + blockMinutes * 60_000);
-      if (end > endOfDay(dayOffset)) {
+      let end = new Date(cursor!.getTime() + blockMinutes * 60_000);
+      if (end > details.end) {
         dayOffset++;
-        cursor = startOfDay(dayOffset);
-        end = new Date(cursor.getTime() + blockMinutes * 60_000);
+        details = moveToAvailableDay();
+        end = new Date(cursor!.getTime() + blockMinutes * 60_000);
       }
       schedule.push({
         title: blocks > 1 ? `${item.title} (${block}/${blocks})` : item.title,
         subject: item.subject || null,
-        start: cursor.toISOString(),
+        start: cursor!.toISOString(),
         end: end.toISOString(),
         priority: item.importance >= 4 ? 'high' : item.importance >= 3 ? 'med' : 'low',
         rank: item.rank,
-        tip: block < blocks ? 'Stop when this block ends and continue in the next scheduled block.' : 'Use the final five minutes to check your work.',
+        tip: block < blocks ? 'Stop at the end of this session—the next part is already scheduled.' : 'Use the final five minutes to check your work.',
       });
       remaining -= blockMinutes;
       block++;
-      cursor = new Date(end.getTime() + breakMinutes * 60_000);
+      blocksToday++;
+      // Choose recovery automatically, including a longer reset after every third session.
+      const recoveryMinutes = blocksToday % 3 === 0 ? 20 : blockMinutes >= 45 ? 10 : 5;
+      cursor = new Date(end.getTime() + recoveryMinutes * 60_000);
     }
   }
 
-  return { rankedItems, schedule };
+  return {
+    rankedItems,
+    schedule,
+    rhythm: 'Work sessions, recovery breaks, and daily limits were selected automatically to keep revision sustainable.',
+  };
 }
 
 async function generateGemini(prompt: string) {

@@ -5,6 +5,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { LoginPage } from './pages/Login';
 import { RegisterPage } from './pages/Register';
+import { ForgotPasswordPage } from './pages/ForgotPassword';
+import { ResetPasswordPage } from './pages/ResetPassword';
 import { DashboardPage } from './pages/Dashboard';
 import { ChatPage } from './pages/Chat';
 import { FocusPage } from './pages/Focus';
@@ -58,6 +60,7 @@ const AppRoutes: React.FC = () => {
       {/* Public routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
 
       {/* Protected student routes */}
@@ -100,6 +103,7 @@ const AppRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  const isPasswordRecovery = new URLSearchParams(window.location.search).get('recovery') === '1';
   return (
     <ThemeProvider>
       <div className="app-shell min-h-screen bg-bg text-text transition-colors duration-300">
@@ -110,7 +114,7 @@ const App: React.FC = () => {
                 title="We hit an app error"
                 description="The page can recover without a full refresh. Click try again to continue."
               >
-                <AppRoutes />
+                {isPasswordRecovery ? <ResetPasswordPage /> : <AppRoutes />}
               </ErrorBoundary>
               <Toaster
                 position="top-right"

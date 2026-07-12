@@ -201,6 +201,21 @@ export const authAPI = {
     if (error) fail(error);
     return { data: { message: 'Logged out' } };
   },
+
+  async requestPasswordReset(email: string): ApiResponse {
+    requireSupabaseConfig();
+    const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}?recovery=1`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    if (error) fail(error);
+    return { data: { message: 'If an account exists, a password reset link has been sent.' } };
+  },
+
+  async updatePassword(password: string): ApiResponse {
+    requireSupabaseConfig();
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) fail(error);
+    return { data: { message: 'Password updated successfully.' } };
+  },
 };
 
 export const userAPI = {

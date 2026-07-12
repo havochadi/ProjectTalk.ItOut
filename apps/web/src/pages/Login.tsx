@@ -128,6 +128,12 @@ export const LoginPage: React.FC = () => {
                 required
               />
 
+              <div className="-mt-2 text-right">
+                <Link to="/forgot-password" className="inline-flex min-h-11 items-center text-sm font-semibold text-wellness-sage-600 hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+
               <Button
                 type="submit"
                 className="w-full rounded-full bg-[#13111C] py-3 font-semibold text-white hover:bg-wellness-sage-700 transition-all"

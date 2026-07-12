@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarClock, ChevronDown, ChevronUp, Clock, Lightbulb, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { CalendarClock, ChevronDown, ChevronUp, Clock, Lightbulb, Loader2, Plus, SlidersHorizontal, Sparkles, Trash2 } from 'lucide-react';
 import { taskAPI } from '../api/client';
 import toast from 'react-hot-toast';
 
@@ -30,7 +30,7 @@ type ScheduleResult = {
   tips: string[];
 };
 
-const fieldClass = 'w-full min-h-11 rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text focus:border-wellness-sage-400 focus:outline-none focus:ring-1 focus:ring-wellness-sage-400';
+const fieldClass = 'w-full min-h-11 rounded-xl border border-wellness-neutral-200 bg-white px-3 py-2.5 text-sm text-wellness-neutral-900 [color-scheme:light] placeholder:text-wellness-neutral-500 focus:border-wellness-sage-400 focus:outline-none focus:ring-1 focus:ring-wellness-sage-400';
 const newItem = (): SchedulerInput => ({
   id: crypto.randomUUID(),
   title: '',
@@ -53,6 +53,7 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
   const [result, setResult] = useState<ScheduleResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const updateItem = (id: string, key: keyof SchedulerInput, value: string | number) => {
     setItems((current) => current.map((item) => item.id === id ? { ...item, [key]: value } : item));
@@ -74,7 +75,7 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
       const response = await taskAPI.generateSchedule({
         items: validItems.map((item) => ({
           ...item,
-          deadline: item.deadline ? new Date(item.deadline).toISOString() : undefined,
+          deadline: item.deadline ? new Date(`${item.deadline}T23:59:00`).toISOString() : undefined,
         })),
         preferences,
       });
@@ -135,12 +136,12 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="space-y-6 border-t border-wellness-sage-200 bg-surface/95 p-4 sm:p-5">
+            <div className="space-y-5 border-t border-wellness-sage-200 bg-white p-4 text-wellness-neutral-900 sm:p-5">
               <div>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h2 className="text-sm font-bold text-text">1. What do you need to do?</h2>
-                    <p className="text-xs text-muted">Importance, deadline, and effort determine the order.</p>
+                    <h2 className="text-sm font-bold text-wellness-neutral-900">Add what you need to do</h2>
+                    <p className="text-xs text-wellness-neutral-600">The scheduler will decide the best order.</p>
                   </div>
                   <button
                     type="button"
@@ -153,123 +154,141 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
 
                 <div className="space-y-3">
                   {items.map((item, index) => (
-                    <div key={item.id} className="rounded-xl border border-border bg-surface-alt p-3 sm:p-4">
+                    <div key={item.id} className="rounded-xl border border-wellness-neutral-200 bg-wellness-neutral-50 p-3 sm:p-4">
                       <div className="mb-3 flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wide text-muted">Item {index + 1}</span>
+                        <span className="text-xs font-bold uppercase tracking-wide text-wellness-neutral-600">Task {index + 1}</span>
                         {items.length > 1 && (
                           <button
                             type="button"
                             onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))}
-                            className="flex h-10 w-10 items-center justify-center rounded-xl text-muted hover:bg-red-50 hover:text-red-600"
+                            className="flex h-10 w-10 items-center justify-center rounded-xl text-wellness-neutral-500 hover:bg-red-50 hover:text-red-600"
                             aria-label={`Remove item ${index + 1}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
                       </div>
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                        <label className="sm:col-span-2 lg:col-span-2">
-                          <span className="mb-1 block text-xs font-semibold text-text">Task</span>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <label className="sm:col-span-2 lg:col-span-1">
+                          <span className="mb-1 block text-xs font-semibold text-wellness-neutral-800">What needs to be done?</span>
                           <input className={fieldClass} value={item.title} onChange={(event) => updateItem(item.id, 'title', event.target.value)} placeholder="e.g. Finish chemistry report" />
                         </label>
                         <label>
-                          <span className="mb-1 block text-xs font-semibold text-text">Subject</span>
-                          <input className={fieldClass} value={item.subject} onChange={(event) => updateItem(item.id, 'subject', event.target.value)} placeholder="Chemistry" />
+                          <span className="mb-1 block text-xs font-semibold text-wellness-neutral-800">Due date</span>
+                          <input type="date" className={fieldClass} value={item.deadline} onChange={(event) => updateItem(item.id, 'deadline', event.target.value)} />
                         </label>
                         <label>
-                          <span className="mb-1 block text-xs font-semibold text-text">Deadline</span>
-                          <input type="datetime-local" className={fieldClass} value={item.deadline} onChange={(event) => updateItem(item.id, 'deadline', event.target.value)} />
+                          <span className="mb-1 block text-xs font-semibold text-wellness-neutral-800">Time needed</span>
+                          <select className={fieldClass} value={item.estimatedMinutes} onChange={(event) => updateItem(item.id, 'estimatedMinutes', Number(event.target.value))}>
+                            <option value="30">30 minutes</option>
+                            <option value="45">45 minutes</option>
+                            <option value="60">1 hour</option>
+                            <option value="90">1.5 hours</option>
+                            <option value="120">2 hours</option>
+                            <option value="180">3 hours</option>
+                          </select>
                         </label>
-                        <div className="grid grid-cols-2 gap-2 sm:col-span-2 lg:col-span-1 lg:grid-cols-1">
-                          <label>
-                            <span className="mb-1 block text-xs font-semibold text-text">Minutes needed</span>
-                            <input type="number" min="15" max="720" step="15" className={fieldClass} value={item.estimatedMinutes} onChange={(event) => updateItem(item.id, 'estimatedMinutes', Number(event.target.value))} />
-                          </label>
-                          <label>
-                            <span className="mb-1 block text-xs font-semibold text-text">Importance (1–5)</span>
-                            <input type="number" min="1" max="5" className={fieldClass} value={item.importance} onChange={(event) => updateItem(item.id, 'importance', Number(event.target.value))} />
-                          </label>
-                        </div>
+                        <label>
+                          <span className="mb-1 block text-xs font-semibold text-wellness-neutral-800">Priority</span>
+                          <select className={fieldClass} value={item.importance} onChange={(event) => updateItem(item.id, 'importance', Number(event.target.value))}>
+                            <option value="2">Low</option>
+                            <option value="3">Normal</option>
+                            <option value="5">Important</option>
+                          </select>
+                        </label>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div>
-                <h2 className="mb-3 text-sm font-bold text-text">2. When can you work?</h2>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="rounded-xl border border-wellness-neutral-200 bg-wellness-neutral-50 p-3 sm:p-4">
+                <h2 className="mb-3 text-sm font-bold text-wellness-neutral-900">When are you free each day?</h2>
+                <div className="grid gap-3 sm:grid-cols-2">
                   <label>
-                    <span className="mb-1 block text-xs font-semibold text-text">Start planning from</span>
-                    <input type="date" className={fieldClass} value={preferences.startDate} onChange={(event) => setPreferences((value) => ({ ...value, startDate: event.target.value }))} />
-                  </label>
-                  <label>
-                    <span className="mb-1 block text-xs font-semibold text-text">Available from</span>
+                    <span className="mb-1 block text-xs font-semibold text-wellness-neutral-800">From</span>
                     <input type="time" className={fieldClass} value={preferences.dayStart} onChange={(event) => setPreferences((value) => ({ ...value, dayStart: event.target.value }))} />
                   </label>
                   <label>
-                    <span className="mb-1 block text-xs font-semibold text-text">Available until</span>
+                    <span className="mb-1 block text-xs font-semibold text-wellness-neutral-800">Until</span>
                     <input type="time" className={fieldClass} value={preferences.dayEnd} onChange={(event) => setPreferences((value) => ({ ...value, dayEnd: event.target.value }))} />
                   </label>
-                  <label>
-                    <span className="mb-1 block text-xs font-semibold text-text">Focus block</span>
-                    <select className={fieldClass} value={preferences.sessionMinutes} onChange={(event) => setPreferences((value) => ({ ...value, sessionMinutes: Number(event.target.value) }))}>
-                      <option value="25">25 minutes</option>
-                      <option value="45">45 minutes</option>
-                      <option value="60">60 minutes</option>
-                      <option value="90">90 minutes</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span className="mb-1 block text-xs font-semibold text-text">Break</span>
-                    <select className={fieldClass} value={preferences.breakMinutes} onChange={(event) => setPreferences((value) => ({ ...value, breakMinutes: Number(event.target.value) }))}>
-                      <option value="5">5 minutes</option>
-                      <option value="10">10 minutes</option>
-                      <option value="15">15 minutes</option>
-                      <option value="20">20 minutes</option>
-                    </select>
-                  </label>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((value) => !value)}
+                  className="mt-3 flex min-h-10 items-center gap-2 text-xs font-semibold text-wellness-neutral-600 hover:text-wellness-sage-700"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {showAdvanced ? 'Hide extra settings' : 'More settings'}
+                </button>
+                {showAdvanced && (
+                  <div className="mt-2 grid gap-3 border-t border-wellness-neutral-200 pt-3 sm:grid-cols-3">
+                    <label>
+                      <span className="mb-1 block text-xs font-semibold text-wellness-neutral-800">Start date</span>
+                      <input type="date" className={fieldClass} value={preferences.startDate} onChange={(event) => setPreferences((value) => ({ ...value, startDate: event.target.value }))} />
+                    </label>
+                    <label>
+                      <span className="mb-1 block text-xs font-semibold text-wellness-neutral-800">Focus blocks</span>
+                      <select className={fieldClass} value={preferences.sessionMinutes} onChange={(event) => setPreferences((value) => ({ ...value, sessionMinutes: Number(event.target.value) }))}>
+                        <option value="25">25 minutes</option>
+                        <option value="45">45 minutes</option>
+                        <option value="60">60 minutes</option>
+                        <option value="90">90 minutes</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span className="mb-1 block text-xs font-semibold text-wellness-neutral-800">Breaks</span>
+                      <select className={fieldClass} value={preferences.breakMinutes} onChange={(event) => setPreferences((value) => ({ ...value, breakMinutes: Number(event.target.value) }))}>
+                        <option value="5">5 minutes</option>
+                        <option value="10">10 minutes</option>
+                        <option value="15">15 minutes</option>
+                        <option value="20">20 minutes</option>
+                      </select>
+                    </label>
+                  </div>
+                )}
               </div>
 
               <button
                 type="button"
                 onClick={generate}
                 disabled={isGenerating}
-                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-wellness-sage-500 px-4 text-sm font-bold text-white shadow-glow hover:bg-wellness-sage-600 disabled:opacity-60 sm:w-auto"
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-wellness-sage-500 px-5 text-sm font-bold text-white shadow-glow hover:bg-wellness-sage-600 disabled:opacity-60 sm:w-auto"
               >
                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                 {isGenerating ? 'Building your plan…' : 'Build my schedule'}
               </button>
 
               {result && (
-                <div className="space-y-5 border-t border-border pt-5">
+                <div className="space-y-5 border-t border-wellness-neutral-200 pt-5">
                   <div>
-                    <h2 className="text-base font-bold text-text">Your suggested plan</h2>
-                    <p className="mt-1 text-sm text-muted">{result.overview}</p>
+                    <h2 className="text-base font-bold text-wellness-neutral-900">Your suggested plan</h2>
+                    <p className="mt-1 text-sm text-wellness-neutral-600">{result.overview}</p>
                   </div>
 
                   <div className="grid gap-4 lg:grid-cols-2">
-                    <div className="rounded-xl border border-border bg-surface-alt p-4">
-                      <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-muted">Priority ranking</h3>
+                    <div className="rounded-xl border border-wellness-neutral-200 bg-wellness-neutral-50 p-4">
+                      <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-wellness-neutral-600">Priority ranking</h3>
                       <ol className="space-y-3">
                         {result.rankedItems.map((item) => (
                           <li key={`${item.rank}-${item.title}`} className="flex gap-3">
                             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-wellness-sage-500 text-xs font-bold text-white">{item.rank}</span>
                             <span className="min-w-0">
-                              <span className="block break-words text-sm font-semibold text-text">{item.title}</span>
-                              <span className="block text-xs text-muted">{item.reason}</span>
+                              <span className="block break-words text-sm font-semibold text-wellness-neutral-900">{item.title}</span>
+                              <span className="block text-xs text-wellness-neutral-600">{item.reason}</span>
                             </span>
                           </li>
                         ))}
                       </ol>
                     </div>
 
-                    <div className="rounded-xl border border-border bg-surface-alt p-4">
-                      <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-muted">Helpful tips</h3>
+                    <div className="rounded-xl border border-wellness-neutral-200 bg-wellness-neutral-50 p-4">
+                      <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-wellness-neutral-600">Helpful tips</h3>
                       <ul className="space-y-2">
                         {result.tips.map((tip) => (
-                          <li key={tip} className="flex gap-2 text-sm text-text">
+                          <li key={tip} className="flex gap-2 text-sm text-wellness-neutral-900">
                             <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-wellness-sage-500" />
                             <span>{tip}</span>
                           </li>
@@ -279,21 +298,21 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
                   </div>
 
                   <div>
-                    <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-muted">Schedule</h3>
+                    <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-wellness-neutral-600">Schedule</h3>
                     <div className="space-y-2">
                       {result.schedule.map((block, index) => (
-                        <div key={`${block.start}-${block.title}`} className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3 sm:flex-row sm:items-center">
+                        <div key={`${block.start}-${block.title}`} className="flex flex-col gap-2 rounded-xl border border-wellness-neutral-200 bg-white p-3 sm:flex-row sm:items-center">
                           <div className="flex min-w-[9rem] items-center gap-2 text-xs font-semibold text-wellness-sage-700">
                             <CalendarClock className="h-4 w-4 shrink-0" />
                             <span>{new Date(block.start).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
                           </div>
-                          <div className="flex min-w-[7rem] items-center gap-2 text-xs text-muted">
+                          <div className="flex min-w-[7rem] items-center gap-2 text-xs text-wellness-neutral-600">
                             <Clock className="h-4 w-4 shrink-0" />
                             <span>{new Date(block.start).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit' })}–{new Date(block.end).toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="break-words text-sm font-semibold text-text">{index + 1}. {block.title}</p>
-                            <p className="text-xs text-muted">{block.tip}</p>
+                            <p className="break-words text-sm font-semibold text-wellness-neutral-900">{index + 1}. {block.title}</p>
+                            <p className="text-xs text-wellness-neutral-600">{block.tip}</p>
                           </div>
                         </div>
                       ))}

@@ -2,8 +2,7 @@
 
 This deployment uses GitHub Pages for the React frontend and Supabase for
 authentication, PostgreSQL, Row Level Security, realtime events, and Edge
-Functions. The legacy Express/MongoDB app under `apps/api` is no longer needed
-by the web frontend.
+Functions. No separate application server is required.
 
 ## 1. Create the project
 
@@ -19,19 +18,20 @@ The publishable/anon key is designed to be used by the browser. Never put the
 
 ## 2. Create the database
 
-The repository contains the complete schema and security policies in:
+The repository contains the schema and security policies as ordered migrations
+under:
 
 ```text
-supabase/migrations/20260712000000_initial_schema.sql
+supabase/migrations/
 ```
 
 Choose one method.
 
 ### Dashboard method
 
-1. Open **SQL Editor -> New query** in Supabase.
-2. Copy the entire migration file into the editor.
-3. Click **Run** once.
+1. Open each migration in filename order.
+2. Paste it into **SQL Editor -> New query**.
+3. Click **Run** once for each migration.
 
 ### CLI method
 
@@ -105,8 +105,6 @@ Voice is optional. To enable it:
 ```powershell
 npx supabase@latest secrets set ELEVENLABS_API_KEY=YOUR_ELEVENLABS_API_KEY
 npx supabase@latest secrets set ELEVENLABS_VOICE_ID=YOUR_VOICE_ID
-npx supabase@latest secrets set ELEVENLABS_STT_MODEL=scribe_v1
-npx supabase@latest secrets set MAX_STT_SECONDS=60
 npx supabase@latest functions deploy voice
 ```
 

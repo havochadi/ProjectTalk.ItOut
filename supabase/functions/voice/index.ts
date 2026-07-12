@@ -8,10 +8,9 @@ Deno.serve(async (request) => {
     const action = request.headers.get('x-talkitout-action') || 'config';
     const apiKey = Deno.env.get('ELEVENLABS_API_KEY');
     const defaultVoiceId = Deno.env.get('ELEVENLABS_VOICE_ID') || '21m00Tcm4TlvDq8ikWAM';
-    const maxRecordingSeconds = Number(Deno.env.get('MAX_STT_SECONDS') || 60);
 
     if (action === 'config') {
-      return json({ enabled: Boolean(apiKey), defaultVoiceId, maxRecordingSeconds });
+      return json({ enabled: Boolean(apiKey), defaultVoiceId });
     }
     if (!apiKey) return json({ error: 'ELEVENLABS_API_KEY is not configured' }, 503);
 
@@ -50,29 +49,6 @@ Deno.serve(async (request) => {
           'Cache-Control': 'private, max-age=3600',
         },
       });
-    }
-
-    if (action === 'stt') {
-      const incoming = await request.formData();
-      const file = incoming.get('file');
-      if (!(file instanceof File)) return json({ error: 'Audio file is required' }, 400);
-      if (file.size > maxRecordingSeconds * 12000)
-        return json({ error: 'Audio recording is too long' }, 400);
-      const outgoing = new FormData();
-      outgoing.append('file', file, file.name || 'recording.webm');
-      outgoing.append('model_id', Deno.env.get('ELEVENLABS_STT_MODEL') || 'scribe_v1');
-      const upstream = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
-        method: 'POST',
-        headers: { 'xi-api-key': apiKey },
-        body: outgoing,
-      });
-      const payload = await upstream.json();
-      if (!upstream.ok)
-        return json(
-          { error: payload?.detail?.message || `ElevenLabs STT failed (${upstream.status})` },
-          502
-        );
-      return json({ text: String(payload.text || '').trim() });
     }
 
     return json({ error: 'Unknown voice action' }, 400);

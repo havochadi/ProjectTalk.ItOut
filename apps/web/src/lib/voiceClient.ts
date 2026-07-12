@@ -1,16 +1,13 @@
-import { api } from '../api/client';
+import { voiceAPI } from '../api/client';
 
 // Voice configuration
 let voiceConfig = {
   enabled: false,
   defaultVoiceId: 'Rachel',
-  maxRecordingSeconds: 60,
 };
 
 // Active audio elements
 let currentAudio: HTMLAudioElement | null = null;
-let mediaRecorder: MediaRecorder | null = null;
-let audioChunks: Blob[] = [];
 
 // Web Speech API recognition
 let recognition: any = null;
@@ -28,7 +25,7 @@ export function isBrowserSpeechSupported(): boolean {
  */
 export async function initializeVoiceClient(): Promise<void> {
   try {
-    const response = await api.get('/voice/config');
+    const response = await voiceAPI.getConfig();
     voiceConfig = response.data;
   } catch (error) {
     console.warn('Voice features not available:', error);
@@ -41,13 +38,6 @@ export async function initializeVoiceClient(): Promise<void> {
  */
 export function isVoiceEnabled(): boolean {
   return voiceConfig.enabled;
-}
-
-/**
- * Get voice configuration
- */
-export function getVoiceConfig() {
-  return voiceConfig;
 }
 
 /**
@@ -70,12 +60,9 @@ export async function speak(text: string, voiceId?: string): Promise<void> {
     stopSpeaking();
 
     // Request TTS from API
-    const response = await api.post(
-      '/voice/tts',
-      { text: text.trim(), voiceId: voiceId || voiceConfig.defaultVoiceId },
-      {
-        responseType: 'blob',
-      }
+    const response = await voiceAPI.textToSpeech(
+      text.trim(),
+      voiceId || voiceConfig.defaultVoiceId
     );
 
     // Create audio blob and play
@@ -117,7 +104,7 @@ export async function speak(text: string, voiceId?: string): Promise<void> {
 /**
  * Stop currently playing audio
  */
-export function stopSpeaking(): void {
+function stopSpeaking(): void {
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.currentTime = 0;
@@ -133,195 +120,6 @@ export function stopAllSpeech(): void {
 
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.cancel();
-  }
-}
-
-/**
- * Check if audio is currently playing
- */
-export function isSpeaking(): boolean {
-  return currentAudio !== null && !currentAudio.paused;
-}
-
-/**
- * Record audio from microphone and transcribe it
- * @returns Promise that resolves with the transcribed text
- */
-export async function recordAndTranscribe(): Promise<string> {
-  if (!voiceConfig.enabled) {
-    throw new Error('Voice features are not available');
-  }
-
-  // Check if microphone is available
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    throw new Error('Microphone not available in this browser');
-  }
-
-  try {
-    // Request microphone access
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-    return new Promise<string>((resolve, reject) => {
-      audioChunks = [];
-
-      // Create MediaRecorder with opus codec for best quality/size ratio
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
-
-      mediaRecorder = new MediaRecorder(stream, {
-        mimeType,
-      });
-
-      mediaRecorder.addEventListener('dataavailable', (event) => {
-        if (event.data.size > 0) {
-          audioChunks.push(event.data);
-        }
-      });
-
-      mediaRecorder.addEventListener('stop', async () => {
-        // Stop all tracks
-        stream.getTracks().forEach((track) => track.stop());
-
-        // Create audio blob
-        const audioBlob = new Blob(audioChunks, { type: mimeType });
-
-        try {
-          // Send to API for transcription
-          const formData = new FormData();
-          formData.append('file', audioBlob, 'recording.webm');
-
-          const response = await api.post('/voice/stt', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          });
-
-          resolve(response.data.text);
-        } catch (error) {
-          console.error('STT error:', error);
-          reject(error);
-        } finally {
-          mediaRecorder = null;
-          audioChunks = [];
-        }
-      });
-
-      mediaRecorder.addEventListener('error', (error) => {
-        stream.getTracks().forEach((track) => track.stop());
-        mediaRecorder = null;
-        audioChunks = [];
-        reject(error);
-      });
-
-      // Start recording
-      mediaRecorder.start();
-
-      // Auto-stop after max duration
-      setTimeout(() => {
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-          mediaRecorder.stop();
-        }
-      }, voiceConfig.maxRecordingSeconds * 1000);
-    });
-  } catch (error) {
-    console.error('Recording error:', error);
-
-    if (error instanceof Error && error.name === 'NotAllowedError') {
-      throw new Error('Microphone access denied. Please allow microphone access to use voice features.');
-    }
-
-    throw error;
-  }
-}
-
-/**
- * Start recording (returns a stop function)
- * Use this for manual recording control
- */
-export async function startRecording(): Promise<() => Promise<string>> {
-  if (!voiceConfig.enabled) {
-    throw new Error('Voice features are not available');
-  }
-
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    throw new Error('Microphone not available in this browser');
-  }
-
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  audioChunks = [];
-
-  const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-    ? 'audio/webm;codecs=opus'
-    : 'audio/webm';
-
-  mediaRecorder = new MediaRecorder(stream, { mimeType });
-
-  mediaRecorder.addEventListener('dataavailable', (event) => {
-    if (event.data.size > 0) {
-      audioChunks.push(event.data);
-    }
-  });
-
-  mediaRecorder.start();
-
-  // Return stop function
-  return async (): Promise<string> => {
-    if (!mediaRecorder || mediaRecorder.state !== 'recording') {
-      throw new Error('No active recording');
-    }
-
-    return new Promise<string>((resolve, reject) => {
-      if (!mediaRecorder) {
-        reject(new Error('No active recording'));
-        return;
-      }
-
-      const handleStop = async () => {
-        stream.getTracks().forEach((track) => track.stop());
-
-        const audioBlob = new Blob(audioChunks, { type: mimeType });
-
-        try {
-          const formData = new FormData();
-          formData.append('file', audioBlob, 'recording.webm');
-
-          const response = await api.post('/voice/stt', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          });
-
-          resolve(response.data.text);
-        } catch (error) {
-          reject(error);
-        } finally {
-          mediaRecorder = null;
-          audioChunks = [];
-        }
-      };
-
-      mediaRecorder!.addEventListener('stop', handleStop, { once: true });
-      mediaRecorder!.stop();
-    });
-  };
-}
-
-/**
- * Check if currently recording
- */
-export function isRecording(): boolean {
-  return mediaRecorder !== null && mediaRecorder.state === 'recording';
-}
-
-/**
- * Stop current recording without transcribing
- */
-export function stopRecording(): void {
-  if (mediaRecorder && mediaRecorder.state === 'recording') {
-    mediaRecorder.stop();
-    mediaRecorder = null;
-    audioChunks = [];
   }
 }
 
@@ -417,17 +215,6 @@ export async function startBrowserRecognition(
       reject(error);
     }
   });
-}
-
-/**
- * Stop browser-based speech recognition
- */
-export function stopBrowserRecognition(): void {
-  if (recognition && isRecognitionActive) {
-    recognition.stop();
-    recognition = null;
-    isRecognitionActive = false;
-  }
 }
 
 // Track current speech promise to prevent interruptions

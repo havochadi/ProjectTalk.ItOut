@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { userAPI, privacyAPI } from '../api/client';
 import { getUserPreferences, saveUserPreferences } from '../store/userPrefs';
-import { getVoiceConfig, isVoiceEnabled } from '../lib/voiceClient';
+import { isVoiceEnabled } from '../lib/voiceClient';
 import { Card } from '../components/Card';
 import { Toggle } from '../components/Toggle';
 import { Slider } from '../components/Slider';
@@ -34,11 +34,10 @@ export const SettingsPage: React.FC = () => {
     profile?.preferences?.pomodoro || { focusDuration: 25, breakDuration: 5, longBreakDuration: 15, cyclesBeforeLongBreak: 4 }
   );
   const [voicePrefs, setVoicePrefs] = useState(getUserPreferences());
-  const [voiceConfig, setVoiceConfig] = useState({ enabled: false, defaultVoiceId: 'Rachel', maxRecordingSeconds: 60 });
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
 
   useEffect(() => {
-    const cfg = getVoiceConfig();
-    setVoiceConfig({ enabled: isVoiceEnabled(), defaultVoiceId: cfg.defaultVoiceId || 'Rachel', maxRecordingSeconds: cfg.maxRecordingSeconds || 60 });
+    setVoiceEnabled(isVoiceEnabled());
   }, []);
 
   const handleUpdatePomodoro = async () => {
@@ -104,28 +103,24 @@ export const SettingsPage: React.FC = () => {
       {/* Voice */}
       <Card className="space-y-5 p-6">
         <SectionHeader icon={Headphones} title="Voice & playback"
-          description={voiceConfig.enabled
+          description={voiceEnabled
             ? 'Manage how the companion speaks to you.'
             : 'Voice is not configured — contact your admin to enable it.'} />
         <div className="rounded-xl border border-border bg-surface-alt px-4 py-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-text">Auto-play assistant replies</span>
             <Toggle isOn={voicePrefs.autoPlayVoice} onToggle={() => setVoicePrefs((p) => ({ ...p, autoPlayVoice: !p.autoPlayVoice }))}
-              label="" disabled={!voiceConfig.enabled} />
+              label="" disabled={!voiceEnabled} />
           </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div>
           <label className="space-y-1.5">
             <span className="text-xs font-semibold uppercase tracking-wide text-muted">Voice ID</span>
             <input className={inputClass} value={voicePrefs.voiceId}
               onChange={(e) => setVoicePrefs((p) => ({ ...p, voiceId: e.target.value }))} placeholder="Rachel" />
           </label>
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted">Max recording (s)</span>
-            <input className={inputClass} disabled value={voiceConfig.maxRecordingSeconds} readOnly />
-          </label>
         </div>
-        <button type="button" onClick={handleUpdateVoiceSettings} className={btnPrimary} disabled={!voiceConfig.enabled}>
+        <button type="button" onClick={handleUpdateVoiceSettings} className={btnPrimary} disabled={!voiceEnabled}>
           Save voice settings
         </button>
       </Card>

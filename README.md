@@ -45,11 +45,9 @@ An AI-powered support system for Singapore students (ages 10-19) that helps with
 ```
 talkitout/
 ├── apps/
-│   ├── api/          # Legacy Express/MongoDB backend
 │   └── web/          # React frontend
 ├── packages/
-│   ├── ui/           # Design system components
-│   └── lib/          # Shared utilities & types
+│   └── ui/           # Design system components
 ├── supabase/
 │   ├── migrations/   # PostgreSQL schema and RLS policies
 │   └── functions/    # AI, voice, and account Edge Functions
@@ -139,16 +137,13 @@ npm run build --workspace=@talkitout/web
 
 The frontend uses the Supabase JavaScript client for Auth and RLS-protected
 database operations. Secret-backed operations are in `supabase/functions`.
-`docs/api.yaml` describes the legacy Express API and is retained as migration
-reference only.
+All server-side behavior runs through Supabase Edge Functions and PostgreSQL.
 
 ## Architecture
 
-See `docs/architecture.md` for detailed architecture documentation.
+**Key design decisions:**
 
-**Key Design Decisions:**
-
-- Monorepo for code sharing
+- Small workspace for the web app and shared UI components
 - Supabase Auth with automatically refreshed sessions
 - Row Level Security for per-user and counselor access
 - Supabase Realtime for risk alerts

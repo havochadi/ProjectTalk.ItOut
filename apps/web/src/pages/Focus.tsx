@@ -6,6 +6,7 @@ import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { Timer, Coffee, Zap, Wind, BookOpen, Leaf } from 'lucide-react';
+import { GuidedExerciseModal } from '../components/GuidedExerciseModal';
 
 const phaseConfig = {
   focus:     { label: 'Focus time',   icon: Zap,    color: 'bg-wellness-sage-500',     ring: '#7B6CF6', emoji: '🎯' },
@@ -14,9 +15,9 @@ const phaseConfig = {
 };
 
 const mindfulActivities = [
-  { icon: Wind,     label: 'Box Breathing (4-4-4-4)',   desc: '4 s in · 4 s hold · 4 s out · 4 s hold' },
-  { icon: BookOpen, label: '5-4-3-2-1 Grounding',       desc: 'Name 5 things you can see' },
-  { icon: Leaf,     label: 'Progressive Muscle Relax',  desc: 'Tense & release each muscle group' },
+  { id: 'breathing', icon: Wind,     label: 'Box Breathing (4-4-4-4)',   desc: 'Follow a guided breathing circle' },
+  { id: 'grounding', icon: BookOpen, label: '5-4-3-2-1 Grounding',       desc: 'Walk through each sense, one step at a time' },
+  { id: null,        icon: Leaf,     label: 'Progressive Muscle Relax',  desc: 'Tense & release each muscle group' },
 ];
 
 export const FocusPage: React.FC = () => {
@@ -28,6 +29,7 @@ export const FocusPage: React.FC = () => {
   const [currentCycle, setCurrentCycle] = useState(0);
   const [sessionType, setSessionType] = useState<'focus' | 'break' | 'longBreak'>('focus');
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [guidedExercise, setGuidedExercise] = useState<'breathing' | 'grounding' | null>(null);
 
   const prefs = profile?.preferences?.pomodoro || {
     focusDuration: 25, breakDuration: 5, longBreakDuration: 15, cyclesBeforeLongBreak: 4,
@@ -231,19 +233,27 @@ export const FocusPage: React.FC = () => {
           <div className="card-wellness p-5">
             <p className="mb-3 text-sm font-bold text-text">Mindful break ideas</p>
             <div className="space-y-2">
-              {mindfulActivities.map(({ icon: Icon, label, desc }) => (
-                <div key={label} className="flex items-start gap-2.5 rounded-xl border border-border bg-surface-alt px-3 py-2.5">
+              {mindfulActivities.map(({ id, icon: Icon, label, desc }) => (
+                <button
+                  type="button"
+                  key={label}
+                  onClick={() => id && setGuidedExercise(id as 'breathing' | 'grounding')}
+                  disabled={!id}
+                  className="flex min-h-14 w-full items-start gap-2.5 rounded-xl border border-border bg-surface-alt px-3 py-2.5 text-left transition enabled:hover:border-wellness-sage-300 enabled:hover:bg-surface disabled:cursor-default"
+                >
                   <Icon className="mt-0.5 h-4 w-4 shrink-0 text-wellness-sage-500" />
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-text">{label}</p>
                     <p className="text-[0.65rem] text-muted">{desc}</p>
                   </div>
-                </div>
+                  {id && <span className="self-center text-[0.65rem] font-bold text-wellness-sage-600">Start</span>}
+                </button>
               ))}
             </div>
           </div>
         </div>
       </div>
+      <GuidedExerciseModal exercise={guidedExercise} onClose={() => setGuidedExercise(null)} />
     </div>
   );
 };

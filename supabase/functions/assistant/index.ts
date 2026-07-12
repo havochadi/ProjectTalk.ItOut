@@ -103,10 +103,20 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
     const day = new Date(`${dateString}T12:00:00Z`).getUTCDay();
     const startTime = weeklyStartTimes[weekdayKeys[day]];
     if (!startTime) return null;
-    const start = new Date(`${dateString}T${startTime}:00+08:00`);
+    const preferredStart = new Date(`${dateString}T${startTime}:00+08:00`);
+    const afterSchool = new Date(`${dateString}T15:30:00+08:00`);
+    const latestStart = new Date(`${dateString}T22:00:00+08:00`);
+    // Weekday work begins after the default school day and all study ends
+    // before the recommended 11 PM bedtime.
+    const schoolAdjustedStart = day >= 1 && day <= 5 && preferredStart < afterSchool
+      ? afterSchool
+      : preferredStart;
+    const start = schoolAdjustedStart > latestStart ? latestStart : schoolAdjustedStart;
     // Prevent overload: cap revision at 2.5 hours on school days and 3 hours on weekends.
     const dailyLimitMinutes = day === 0 || day === 6 ? 180 : 150;
-    return { start, end: new Date(start.getTime() + dailyLimitMinutes * 60_000) };
+    const preferredEnd = new Date(start.getTime() + dailyLimitMinutes * 60_000);
+    const bedtime = new Date(`${dateString}T23:00:00+08:00`);
+    return { start, end: preferredEnd < bedtime ? preferredEnd : bedtime };
   };
   const moveToAvailableDay = () => {
     for (let attempts = 0; attempts < 14; attempts++) {
@@ -153,7 +163,7 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
       block++;
       blocksToday++;
       // Choose recovery automatically, including a longer reset after every third session.
-      const recoveryMinutes = blocksToday % 3 === 0 ? 20 : blockMinutes >= 45 ? 10 : 5;
+      const recoveryMinutes = blocksToday % 3 === 0 ? 25 : 15;
       cursor = new Date(end.getTime() + recoveryMinutes * 60_000);
     }
   }

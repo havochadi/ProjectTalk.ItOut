@@ -291,7 +291,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
                     );
                   })}
                 </div>
-                <p className="mt-3 text-xs leading-relaxed text-white/50">The scheduler automatically limits daily revision, divides longer topics, and adds recovery time to reduce burnout.</p>
+                <p className="mt-3 text-xs leading-relaxed text-white/50">Weekday sessions are placed after the default 8 AM–3 PM school day. The scheduler adds recovery breaks and protects a recommended 11 PM–7 AM sleep window.</p>
               </div>
 
               <button

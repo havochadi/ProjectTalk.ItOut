@@ -120,7 +120,7 @@ export const ScheduleCompanion: React.FC = () => {
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-wellness-sage-300">Always available</p>
                   <h2 className="mt-1 text-xl font-bold">My weekly timetable</h2>
-                  <p className="mt-1 text-sm text-white/55">Your saved homework and revision plan.</p>
+                  <p className="mt-1 text-sm text-white/55">Homework, revision, school, breaks, and recommended sleep in one weekly view.</p>
                 </div>
                 <button type="button" onClick={() => setIsOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-full border border-[#3A3453] text-white/55 hover:bg-white/5 hover:text-white" aria-label="Close timetable">
                   <X className="h-5 w-5" />

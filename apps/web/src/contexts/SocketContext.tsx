@@ -1,11 +1,17 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || window.location.origin;
+type EventHandler = (payload: any) => void;
+
+interface RealtimeSocket {
+  on: (event: string, handler: EventHandler) => void;
+  off: (event: string, handler: EventHandler) => void;
+  emit: (event: string, payload: unknown) => void;
+}
 
 interface SocketContextType {
-  socket: Socket | null;
+  socket: RealtimeSocket | null;
   isConnected: boolean;
 }
 
@@ -13,52 +19,68 @@ const SocketContext = createContext<SocketContextType | undefined>(undefined);
 
 export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<RealtimeSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-        setIsConnected(false);
-      }
+    const isStaff = user?.role === 'counselor' || user?.role === 'admin';
+    if (!isStaff) {
+      setSocket(null);
+      setIsConnected(false);
       return;
     }
 
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
-
-    const newSocket = io(SOCKET_URL, {
-      auth: { token },
-    });
-
-    newSocket.on('connect', () => {
-      console.log('Socket connected');
-      setIsConnected(true);
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('Socket disconnected');
-      setIsConnected(false);
-    });
-
-    newSocket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-      setIsConnected(false);
-    });
-
-    setSocket(newSocket);
-
-    return () => {
-      newSocket.disconnect();
+    const handlers = new Map<string, Set<EventHandler>>();
+    const adapter: RealtimeSocket = {
+      on(event, handler) {
+        const eventHandlers = handlers.get(event) || new Set<EventHandler>();
+        eventHandlers.add(handler);
+        handlers.set(event, eventHandlers);
+      },
+      off(event, handler) {
+        handlers.get(event)?.delete(handler);
+      },
+      // Pomodoro events were previously sent to Socket.IO, but no server-side
+      // listener consumed them. Timer persistence now happens through Supabase.
+      emit() {},
     };
-  }, [user]);
+
+    const channel = supabase
+      .channel('counselor-risk-flags')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'risk_flags' },
+        async (payload) => {
+          const flag: any = payload.new;
+          const { data: student } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', flag.user_id)
+            .maybeSingle();
+          handlers.get('riskFlag:created')?.forEach((handler) =>
+            handler({
+              flagId: flag.id,
+              studentId: flag.user_id,
+              studentName: student?.name,
+              severity: flag.severity,
+              tags: flag.tags || [],
+              createdAt: flag.created_at,
+            })
+          );
+        }
+      )
+      .subscribe((status) => setIsConnected(status === 'SUBSCRIBED'));
+
+    setSocket(adapter);
+    return () => {
+      setSocket(null);
+      setIsConnected(false);
+      void supabase.removeChannel(channel);
+    };
+  }, [user?.id, user?.role]);
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected }}>
-      {children}
-    </SocketContext.Provider>
+    <SocketContext.Provider value={{ socket, isConnected }}>{children}</SocketContext.Provider>
   );
 };
 

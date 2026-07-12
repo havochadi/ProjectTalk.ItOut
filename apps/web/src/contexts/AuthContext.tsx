@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authAPI, userAPI } from '../api/client';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 interface User {
@@ -29,24 +30,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    checkAuth();
+    void checkAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        setUser(null);
+        setProfile(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Defer database work until the auth callback has released its lock.
+      window.setTimeout(() => void refreshUser(), 0);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const checkAuth = async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
+    if (!isSupabaseConfigured) {
       setIsLoading(false);
       return;
     }
 
     try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        setIsLoading(false);
+        return;
+      }
       const response = await userAPI.getMe();
       setUser(response.data.user);
       setProfile(response.data.profile);
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      await supabase.auth.signOut();
     } finally {
       setIsLoading(false);
     }
@@ -55,10 +75,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string) => {
     try {
       const response = await authAPI.login({ email, password });
-      const { user, accessToken, refreshToken } = response.data;
-
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      const { user } = response.data;
 
       setUser(user);
       toast.success('Welcome back!');
@@ -81,10 +98,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (data: any) => {
     try {
       const response = await authAPI.register(data);
-      const { user, accessToken, refreshToken } = response.data;
-
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+      const { user } = response.data;
 
       setUser(user);
       toast.success('Account created successfully!');
@@ -105,15 +119,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (refreshToken) {
-        await authAPI.logout(refreshToken);
-      }
+      await authAPI.logout();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
       setUser(null);
       setProfile(null);
       toast.success('Logged out successfully');
@@ -131,7 +140,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, isLoading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider
+      value={{ user, profile, isLoading, login, register, logout, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

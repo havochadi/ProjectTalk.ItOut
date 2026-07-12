@@ -21,7 +21,7 @@ if (!GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
 
-const AI_MODEL = process.env.AI_MODEL || 'gemini-2.0-flash';
+const AI_MODEL = process.env.AI_MODEL || 'gemini-3.5-flash';
 const MODEL_FALLBACKS = Array.from(new Set([AI_MODEL, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro']));
 const ALLOW_EXTERNAL_PII = process.env.ALLOW_EXTERNAL_PII === 'true';
 const RESPONSE_STYLE_GUIDELINE =

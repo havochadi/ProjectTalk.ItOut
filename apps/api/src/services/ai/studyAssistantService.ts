@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
-const AI_MODEL = process.env.AI_MODEL || 'gemini-pro';
+const AI_MODEL = process.env.AI_MODEL || 'gemini-3.5-flash';
 
 interface StudySuggestion {
   method: string;

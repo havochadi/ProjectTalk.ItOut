@@ -1,0 +1,10 @@
+project_id = "talkitout"
+
+[functions.assistant]
+verify_jwt = true
+
+[functions.voice]
+verify_jwt = true
+
+[functions.account]
+verify_jwt = true

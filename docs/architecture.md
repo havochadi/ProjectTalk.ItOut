@@ -1,4 +1,9 @@
-# TalkItOut Architecture
+# TalkItOut Architecture (legacy Express/MongoDB reference)
+
+> The GitHub Pages deployment now uses Supabase Auth, PostgreSQL, Realtime,
+> Row Level Security, and Edge Functions. See [supabase-setup.md](supabase-setup.md)
+> and the `supabase/` directory for the active deployment architecture. The
+> document below describes the retained legacy backend.
 
 ## System Overview
 

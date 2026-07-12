@@ -5,6 +5,7 @@ An AI-powered support system for Singapore students (ages 10-19) that helps with
 ## Features
 
 ### For Students
+
 - 💬 **AI Chat Companion** - Supportive, non-clinical study companion powered by Google Gemini
 - 🎯 **Pomodoro Focus Timer** - Interactive focus sessions with breathing exercises
 - ✅ **Task Management** - Kanban-style task board with priorities and due dates
@@ -13,12 +14,14 @@ An AI-powered support system for Singapore students (ages 10-19) that helps with
 - 🧘 **Wellness Activities** - Box breathing, grounding exercises, thought reframing
 
 ### For Counselors
+
 - 📊 **Dashboard** - Aggregated metrics and student engagement
 - ⚠️ **Risk Detection** - AI-powered sentiment analysis and risk flagging
 - 👥 **Student Management** - View and monitor student progress
 - 📈 **Analytics** - Mood trends, session data, and intervention tracking
 
 ### Privacy & Safety
+
 - 🔒 **PDPA/GDPR Compliant** - Pseudonymization of PII before external API calls
 - 🚨 **Crisis Detection** - Automatic flagging of high-severity messages
 - 📦 **Data Export** - Full data export in JSON format
@@ -26,40 +29,40 @@ An AI-powered support system for Singapore students (ages 10-19) that helps with
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React + Vite + TypeScript + Tailwind CSS |
-| UI/Motion | Framer Motion |
-| Backend | Node.js + Express + TypeScript |
-| Database | MongoDB + Mongoose |
-| Realtime | Socket.IO |
-| AI | Google Gemini |
-| Auth | JWT (access + refresh tokens) |
-| Security | Helmet, CORS, Rate Limiting |
+| Layer     | Technology                                            |
+| --------- | ----------------------------------------------------- |
+| Frontend  | React + Vite + TypeScript + Tailwind CSS              |
+| UI/Motion | Framer Motion                                         |
+| Backend   | Supabase Edge Functions (TypeScript/Deno)             |
+| Database  | Supabase PostgreSQL + Row Level Security              |
+| Realtime  | Supabase Realtime                                     |
+| AI        | Google Gemini                                         |
+| Auth      | Supabase Auth                                         |
+| Security  | PostgreSQL Row Level Security + Edge Function secrets |
 
 ## Project Structure
 
 ```
 talkitout/
 ├── apps/
-│   ├── api/          # Express backend
+│   ├── api/          # Legacy Express/MongoDB backend
 │   └── web/          # React frontend
 ├── packages/
 │   ├── ui/           # Design system components
 │   └── lib/          # Shared utilities & types
-├── docs/             # Documentation
-│   ├── architecture.md
-│   ├── safety-playbook.md
-│   └── api.yaml
-└── docker-compose.yml
+├── supabase/
+│   ├── migrations/   # PostgreSQL schema and RLS policies
+│   └── functions/    # AI, voice, and account Edge Functions
+└── docs/             # Setup, architecture, and safety documentation
 ```
 
 ## Quick Start
 
 ### Prerequisites
-- Node.js 18+
+
+- Node.js 20+
 - npm 9+
-- Docker & Docker Compose (optional)
+- A Supabase project
 - Google Gemini API key
 
 ### 1. Clone and Install
@@ -73,77 +76,42 @@ npm ci
 ### 2. Configure Environment
 
 ```bash
-# Copy example env files
-cp .env.example .env
 cp apps/web/.env.example apps/web/.env
 
-# Edit .env and add your Gemini API key
-# GEMINI_API_KEY=...
+# Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 ```
 
-### 3. Start with Docker (Recommended)
+### 3. Configure Supabase
+
+Follow [the Supabase setup guide](docs/supabase-setup.md) to apply the SQL
+migration, configure Auth, and deploy the Edge Functions.
+
+### 4. Start Locally
 
 ```bash
-# Start all services
-docker-compose up -d
-
-# Wait for services to start, then seed the database
-npm run seed
-
-# View logs
-docker-compose logs -f api
-```
-
-**Access:**
-- Frontend: http://localhost:5173
-- API: http://localhost:4000
-- Mongo Express: http://localhost:8081 (admin/admin123)
-
-### 4. Or Start Locally
-
-```bash
-# Terminal 1: Start MongoDB
-docker-compose up mongo -d
-
-# Terminal 2: Start API
-npm run dev:api
-
-# Terminal 3: Start Web
 npm run dev:web
-
-# Terminal 4: Seed database
-npm run seed
 ```
 
 ## Demo Accounts
 
-After seeding, use these accounts:
-
-| Role | Email | Password |
-|------|-------|----------|
-| Student | weijie@student.sg | password123 |
-| Student | priya@student.sg | password123 |
-| Counselor | counselor@talkitout.sg | password123 |
+Create student accounts through the registration page. To create a counselor,
+register normally and promote the account using the SQL statement in the
+[Supabase setup guide](docs/supabase-setup.md).
 
 ## Development
 
 ```bash
-# Run all tests
-npm test
+# Lint the frontend
+npm run lint --workspace=@talkitout/web
 
-# Lint code
-npm run lint
-
-# Build for production
-npm run build
-
-# Start production
-npm start
+# Build the frontend
+npm run build --workspace=@talkitout/web
 ```
 
 ## Key Features Demo
 
 ### AI Chat with Risk Detection
+
 1. Login as a student
 2. Navigate to Chat
 3. Send message: "I'm feeling really overwhelmed"
@@ -152,6 +120,7 @@ npm start
 6. If severity ≥ 3, crisis message prepended and flag created
 
 ### Pomodoro Focus Session
+
 1. Go to Focus page
 2. Click "Start Focus Session"
 3. See animated breathing circle and countdown timer
@@ -160,36 +129,29 @@ npm start
 6. Session tracked and streak updated
 
 ### Counselor Dashboard
+
 1. Login as counselor
 2. View aggregated metrics
 3. See open risk flags with severity badges
 4. Access student details and message context
 
-## API Documentation
+## Backend
 
-See `docs/api.yaml` for full OpenAPI 3.1 specification.
-
-**Base URL:** `http://localhost:4000`
-
-**Key Endpoints:**
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - Login
-- `POST /chat/message` - Send message to AI
-- `GET /chat/history` - Get conversation history
-- `POST /tasks` - Create task
-- `POST /checkins` - Log mood check-in
-- `POST /pomodoro/start` - Start focus session
-- `GET /risk/flags` - Get risk flags (counselor)
-- `GET /metrics/aggregate` - Get metrics (counselor)
+The frontend uses the Supabase JavaScript client for Auth and RLS-protected
+database operations. Secret-backed operations are in `supabase/functions`.
+`docs/api.yaml` describes the legacy Express API and is retained as migration
+reference only.
 
 ## Architecture
 
 See `docs/architecture.md` for detailed architecture documentation.
 
 **Key Design Decisions:**
+
 - Monorepo for code sharing
-- JWT with refresh tokens for security
-- Socket.IO for realtime features
+- Supabase Auth with automatically refreshed sessions
+- Row Level Security for per-user and counselor access
+- Supabase Realtime for risk alerts
 - Pseudonymization before external API calls
 - Sentiment analysis on all user messages
 - Automatic risk flagging with severity levels
@@ -199,6 +161,7 @@ See `docs/architecture.md` for detailed architecture documentation.
 See `docs/safety-playbook.md` for comprehensive safety guidelines.
 
 **Core Principles:**
+
 - Non-clinical language only
 - Never diagnose or provide therapy
 - Encourage reaching out to trusted adults
@@ -208,37 +171,30 @@ See `docs/safety-playbook.md` for comprehensive safety guidelines.
 
 ## Testing
 
-```bash
-# API tests
-npm run test --workspace=@talkitout/api
-
-# Web tests (when implemented)
-npm run test --workspace=@talkitout/web
-```
+The frontend currently uses build and lint checks. Database authorization is
+defined explicitly in the SQL migration and should also be tested in a staging
+Supabase project before handling real student data.
 
 ## Production Deployment
 
-1. Set strong `JWT_SECRET`
-2. Configure production MongoDB
-3. Set `ALLOWED_ORIGINS` to your domain
-4. Use environment-specific `.env` files
-5. Enable HTTPS/TLS
-6. Set up monitoring and logging
-7. Configure backup strategy
-8. Review security headers
+1. Apply the Supabase migration and review every RLS policy.
+2. Store Gemini and ElevenLabs keys only as Supabase Edge Function secrets.
+3. Configure the GitHub Pages URL in Supabase Auth.
+4. Add only the publishable Supabase values to the GitHub Pages build.
+5. Review logging, retention, consent, and backup requirements before using
+   real student data.
 
-### GitHub Pages (frontend only)
+### GitHub Pages + Supabase
 
-GitHub Pages can host the compiled React frontend, but it cannot run the
-Express API, MongoDB, Socket.IO, or server-side AI integrations. Deploy those
-services to a separate HTTPS host first.
+GitHub Pages hosts the compiled React frontend. Supabase provides the hosted
+database, authentication, realtime events, and server-side Edge Functions.
 
 1. In the repository, open **Settings → Pages** and set **Source** to
    **GitHub Actions**.
-2. Open **Settings → Secrets and variables → Actions → Variables** and add a
-   repository variable named `VITE_API_URL` whose value is the public HTTPS URL
-   of the deployed API (for example, `https://api.example.com`).
-3. On the API host, set `ALLOWED_ORIGINS=https://havochadi.github.io`.
+2. Follow [the Supabase setup guide](docs/supabase-setup.md), including running
+   the SQL migration and deploying the Edge Functions.
+3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as GitHub Actions
+   repository variables.
 4. Push to `main`. The **Deploy web app to GitHub Pages** workflow will publish
    `apps/web/dist` to `https://havochadi.github.io/ProjectTalk.ItOut/`.
 
@@ -260,6 +216,7 @@ refreshing a route does not produce another GitHub Pages 404.
 ## Support
 
 For questions or issues:
+
 - GitHub Issues: [repository-url]/issues
 - Email: support@talkitout.sg
 
@@ -268,6 +225,7 @@ For questions or issues:
 Built for Singapore students with care and attention to mental health best practices.
 
 **Crisis Resources:**
+
 - Emergency: 999
 - Samaritans of Singapore: 1767
 - SOS CareText: 9151 1767

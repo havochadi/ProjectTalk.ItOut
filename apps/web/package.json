@@ -9,15 +9,14 @@
     "lint": "eslint . --ext ts,tsx"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.2",
     "@talkitout/ui": "*",
-    "axios": "^1.6.2",
     "framer-motion": "^10.16.16",
     "lucide-react": "^0.263.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
-    "react-router-dom": "^6.21.0",
-    "socket.io-client": "^4.6.1"
+    "react-router-dom": "^6.21.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.45",

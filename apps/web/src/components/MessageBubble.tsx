@@ -93,15 +93,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         </div>
       )}
 
-      <div className={`max-w-[78%] space-y-1 ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
+      <div className={`max-w-[88%] space-y-1 sm:max-w-[78%] ${isUser ? 'items-end' : 'items-start'} flex min-w-0 flex-col`}>
         <div
-          className={`rounded-3xl px-5 py-3.5 leading-relaxed shadow-card ${
+          className={`max-w-full rounded-3xl px-4 py-3 leading-relaxed shadow-card sm:px-5 sm:py-3.5 ${
             isUser
               ? 'rounded-tr-lg bg-wellness-sage-500 text-white'
               : 'rounded-tl-lg border border-border bg-surface text-text'
           }`}
         >
-          <p className="whitespace-pre-wrap text-sm">{message.text}</p>
+          <p className="whitespace-pre-wrap break-words text-sm">{message.text}</p>
           {!isUser && message.featureSuggestion && (
             <Link
               to={message.featureSuggestion.path}

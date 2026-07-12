@@ -80,7 +80,7 @@ export const Header: React.FC = () => {
           <button
             type="button"
             onClick={toggleDarkMode}
-            className="rounded-full border border-border p-2 text-muted transition-colors hover:bg-surface-alt hover:text-text"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-muted transition-colors hover:bg-surface-alt hover:text-text"
             aria-label="Toggle theme"
           >
             {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -96,7 +96,7 @@ export const Header: React.FC = () => {
             whileTap={{ scale: 0.97 }}
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 py-2 text-xs font-semibold text-muted transition hover:bg-surface-alt hover:text-text"
+            className="flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 py-2 text-xs font-semibold text-muted transition hover:bg-surface-alt hover:text-text"
           >
             <LogOut className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Sign out</span>
@@ -105,7 +105,7 @@ export const Header: React.FC = () => {
           {/* Mobile menu button */}
           <button
             type="button"
-            className="rounded-full border border-border p-2 text-muted md:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-muted md:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
             {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -131,7 +131,7 @@ export const Header: React.FC = () => {
                     key={item.to}
                     to={item.to}
                     onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
+                    className={`flex min-h-11 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
                       active
                         ? 'bg-wellness-sage-100 text-wellness-sage-700 border border-wellness-sage-200'
                         : 'text-muted hover:bg-wellness-sage-50 hover:text-wellness-sage-600'

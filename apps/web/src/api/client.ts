@@ -299,6 +299,26 @@ export const taskAPI = {
     return { data: mapTask(data) };
   },
 
+  async createMany(inputs: any[]): ApiResponse {
+    const userId = await currentUserId();
+    const rows = inputs.map((input) => ({
+      user_id: userId,
+      title: input.title,
+      subject: input.subject || null,
+      due_at: input.dueAt || null,
+      priority: input.priority || 'med',
+      status: 'todo',
+    }));
+    const { data, error } = await supabase.from('tasks').insert(rows).select();
+    if (error) fail(error);
+    return { data: { tasks: (data || []).map(mapTask) } };
+  },
+
+  async generateSchedule(input: any): ApiResponse {
+    const data = await invokeAssistant({ action: 'smart_schedule', ...input });
+    return { data };
+  },
+
   async getAll(params: any = {}): ApiResponse {
     const userId = await currentUserId();
     let query: any = supabase

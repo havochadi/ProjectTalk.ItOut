@@ -83,7 +83,7 @@ export const RegisterPage: React.FC = () => {
               helperText="At least 8 characters"
               required
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 label="Age"
                 type="number"

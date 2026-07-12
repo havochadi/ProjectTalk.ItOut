@@ -4,6 +4,7 @@ import { Button, Input, Modal } from '@talkitout/ui';
 import { taskAPI } from '../api/client';
 import toast from 'react-hot-toast';
 import { Plus, Trash2, Lightbulb, CheckCircle, Circle, Loader2, TrendingUp } from 'lucide-react';
+import { SmartScheduler } from '../components/SmartScheduler';
 
 interface StudySuggestion {
   method: string;
@@ -107,7 +108,7 @@ export const TasksPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-text">Your tasks</h1>
           <p className="text-sm text-muted">Break things down into manageable steps.</p>
@@ -122,6 +123,8 @@ export const TasksPage: React.FC = () => {
           Add task
         </motion.button>
       </div>
+
+      <SmartScheduler onCreated={loadTasks} />
 
       {/* Kanban */}
       <div className="grid gap-5 md:grid-cols-3">
@@ -207,7 +210,7 @@ export const TasksPage: React.FC = () => {
             <h2 className="text-base font-bold text-text">Progress overview</h2>
           </div>
 
-          <div className="mb-5 grid grid-cols-3 gap-4">
+          <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
             {[
               { label: 'Total tasks', val: taskSummary.totalTasks, color: 'text-wellness-sage-600' },
               { label: 'Completed', val: `${taskSummary.completionRate}%`, color: 'text-wellness-lavender-600' },

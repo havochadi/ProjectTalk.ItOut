@@ -109,7 +109,7 @@ export const DashboardPage: React.FC = () => {
         initial={{ opacity: 0, y: 28 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="relative overflow-hidden rounded-3xl bg-[#13111C] px-8 py-10 text-white"
+        className="relative overflow-hidden rounded-3xl bg-[#13111C] px-5 py-7 text-white sm:px-8 sm:py-10"
       >
         {/* Background decoration */}
         <div className="absolute -right-16 -top-16 h-72 w-72 rounded-full bg-wellness-sage-600/30 blur-3xl" />
@@ -119,7 +119,7 @@ export const DashboardPage: React.FC = () => {
           <p className="text-xs font-semibold text-white/50 uppercase tracking-widest">
             {new Date().toLocaleDateString('en-SG', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight">
+          <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
             {greeting}, {user?.name} 👋
           </h1>
           <p className="mt-2 max-w-lg text-white/70 text-sm leading-relaxed">
@@ -154,7 +154,7 @@ export const DashboardPage: React.FC = () => {
           >
             <Link
               to={to}
-              className={`group flex flex-col gap-3 rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:shadow-card ${cardBg}`}
+              className={`group flex h-full flex-col gap-3 rounded-2xl p-4 transition-all hover:-translate-y-0.5 hover:shadow-card sm:p-5 ${cardBg}`}
             >
               <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconBg}`}>
                 <Icon className={`h-5 w-5 ${iconColor}`} />
@@ -169,7 +169,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         {[
           { icon: TrendingUp, label: 'Avg Mood', value: `${avgMood}/5`, color: 'text-wellness-sage-600', bg: 'bg-wellness-sage-50' },
           { icon: Heart,      label: 'Check-in streak', value: `${checkInStreak} days`, color: 'text-pink-500', bg: 'bg-pink-50' },

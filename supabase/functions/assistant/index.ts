@@ -56,6 +56,78 @@ function suggestAppFeature(text: string, severity: number) {
   return null;
 }
 
+type SchedulerItem = {
+  title: string;
+  subject?: string;
+  deadline?: string;
+  estimatedMinutes: number;
+  importance: number;
+};
+
+function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, unknown>) {
+  const sessionMinutes = Math.min(120, Math.max(15, Number(preferences.sessionMinutes) || 45));
+  const breakMinutes = Math.min(45, Math.max(5, Number(preferences.breakMinutes) || 10));
+  const dayStart = String(preferences.dayStart || '16:00');
+  const dayEnd = String(preferences.dayEnd || '21:00');
+  const startDate = String(preferences.startDate || new Date().toISOString().slice(0, 10));
+
+  const rankedItems = items
+    .map((item) => {
+      const deadlineMs = item.deadline ? new Date(item.deadline).getTime() : Number.POSITIVE_INFINITY;
+      const hoursLeft = Number.isFinite(deadlineMs) ? Math.max(1, (deadlineMs - Date.now()) / 3_600_000) : 720;
+      const urgency = Number.isFinite(deadlineMs) ? Math.max(0, 120 - hoursLeft) / 24 : 0;
+      const score = item.importance * 10 + urgency + Math.min(item.estimatedMinutes / 60, 5);
+      return {
+        ...item,
+        score,
+        reason: `${item.importance >= 4 ? 'High importance' : 'Moderate importance'}${item.deadline ? ` with a deadline on ${new Date(item.deadline).toLocaleDateString('en-SG')}` : ''}.`,
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .map((item, index) => ({ ...item, rank: index + 1 }));
+
+  const schedule: Array<Record<string, unknown>> = [];
+  let dayOffset = 0;
+  let cursor: Date | null = null;
+  const dayString = (offset: number) => {
+    const date = new Date(`${startDate}T00:00:00+08:00`);
+    date.setDate(date.getDate() + offset);
+    return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Singapore' });
+  };
+  const startOfDay = (offset: number) => new Date(`${dayString(offset)}T${dayStart}:00+08:00`);
+  const endOfDay = (offset: number) => new Date(`${dayString(offset)}T${dayEnd}:00+08:00`);
+
+  for (const item of rankedItems) {
+    let remaining = Math.max(15, item.estimatedMinutes);
+    const blocks = Math.ceil(remaining / sessionMinutes);
+    let block = 1;
+    while (remaining > 0) {
+      if (!cursor) cursor = startOfDay(dayOffset);
+      const blockMinutes = Math.min(sessionMinutes, remaining);
+      let end = new Date(cursor.getTime() + blockMinutes * 60_000);
+      if (end > endOfDay(dayOffset)) {
+        dayOffset++;
+        cursor = startOfDay(dayOffset);
+        end = new Date(cursor.getTime() + blockMinutes * 60_000);
+      }
+      schedule.push({
+        title: blocks > 1 ? `${item.title} (${block}/${blocks})` : item.title,
+        subject: item.subject || null,
+        start: cursor.toISOString(),
+        end: end.toISOString(),
+        priority: item.importance >= 4 ? 'high' : item.importance >= 3 ? 'med' : 'low',
+        rank: item.rank,
+        tip: block < blocks ? 'Stop when this block ends and continue in the next scheduled block.' : 'Use the final five minutes to check your work.',
+      });
+      remaining -= blockMinutes;
+      block++;
+      cursor = new Date(end.getTime() + breakMinutes * 60_000);
+    }
+  }
+
+  return { rankedItems, schedule };
+}
+
 async function generateGemini(prompt: string) {
   const apiKey = Deno.env.get('GEMINI_API_KEY');
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured in Supabase secrets');
@@ -135,6 +207,41 @@ Deno.serve(async (request) => {
         totalTasks: tasks.length,
         completionRate: tasks.length ? Math.round((done / tasks.length) * 100) : 0,
       });
+    }
+
+    if (action === 'smart_schedule') {
+      const rawItems = Array.isArray(body.items) ? body.items : [];
+      const items: SchedulerItem[] = rawItems
+        .map((item: Record<string, unknown>) => ({
+          title: String(item.title || '').trim().slice(0, 500),
+          subject: String(item.subject || '').trim().slice(0, 200),
+          deadline: item.deadline ? String(item.deadline) : undefined,
+          estimatedMinutes: Math.min(720, Math.max(15, Number(item.estimatedMinutes) || 60)),
+          importance: Math.min(5, Math.max(1, Number(item.importance) || 3)),
+        }))
+        .filter((item: SchedulerItem) => item.title);
+      if (!items.length) return json({ error: 'Add at least one item to schedule.' }, 400);
+      if (items.length > 20) return json({ error: 'Schedule up to 20 items at a time.' }, 400);
+
+      const plan = buildSmartSchedule(items, body.preferences || {});
+      let overview = `Your ${items.length} item${items.length === 1 ? '' : 's'} are ranked by importance, deadline, and estimated effort.`;
+      let tips = [
+        'Start with the first scheduled block, not the entire workload.',
+        'Keep breaks screen-free when possible so your attention can reset.',
+        'Adjust the plan if a task takes longer than expected.',
+      ];
+      try {
+        const raw = await generateGemini(
+          `Return only valid JSON with overview (one sentence) and tips (exactly 3 short practical strings). ` +
+            `Give natural, student-friendly advice for this study schedule: ${JSON.stringify(plan)}`
+        );
+        const generated = extractJson(raw);
+        if (typeof generated.overview === 'string') overview = generated.overview;
+        if (Array.isArray(generated.tips) && generated.tips.length) tips = generated.tips.slice(0, 3);
+      } catch (aiError) {
+        console.error('Smart schedule tips failed; using local guidance.', aiError);
+      }
+      return json({ ...plan, overview, tips });
     }
 
     if (action !== 'chat' || typeof body.text !== 'string' || !body.text.trim()) {

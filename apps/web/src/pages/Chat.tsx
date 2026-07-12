@@ -180,9 +180,9 @@ export const ChatPage: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-7xl space-y-4">
-      <div className="flex items-stretch gap-5">
+      <div className="flex min-w-0 items-stretch gap-5">
         {/* ── Avatar Panel ────────────────────────────────────── */}
-        <div className="relative w-80 shrink-0" style={chatPanelStyle}>
+        <div className="relative hidden w-72 shrink-0 xl:block" style={chatPanelStyle}>
           <AvatarCanvas
             isSpeaking={isAssistantSpeaking}
             className="!h-full !min-h-0 rounded-3xl border border-border shadow-card"
@@ -191,10 +191,10 @@ export const ChatPage: React.FC = () => {
         </div>
 
         {/* ── Chat Area ──────────────────────────────────────── */}
-        <div className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-card" style={chatPanelStyle}>
+        <div className="flex h-[calc(100dvh-7rem)] min-h-[30rem] min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-card sm:h-[calc(100dvh-9rem)] sm:rounded-3xl" style={{ maxHeight: '760px' }}>
 
           {/* Chat Header */}
-          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-3 sm:px-6 sm:py-4">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-wellness-sage-500 shadow-glow">
                 <Heart className="h-5 w-5 text-white" fill="currentColor" />
@@ -218,7 +218,7 @@ export const ChatPage: React.FC = () => {
               )}
               <button
                 onClick={handleClearChat}
-                className="rounded-xl border border-border px-3 py-1.5 text-xs font-semibold text-muted transition hover:bg-surface-alt hover:text-text"
+                className="min-h-10 rounded-xl border border-border px-3 py-1.5 text-xs font-semibold text-muted transition hover:bg-surface-alt hover:text-text"
               >
                 Clear chat
               </button>
@@ -226,12 +226,12 @@ export const ChatPage: React.FC = () => {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 space-y-3 overflow-y-auto px-6 py-5 bg-[radial-gradient(ellipse_at_top_left,rgba(61,139,122,0.04),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(123,111,173,0.04),transparent_60%)]">
+          <div className="flex-1 space-y-3 overflow-y-auto bg-[radial-gradient(ellipse_at_top_left,rgba(61,139,122,0.04),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(123,111,173,0.04),transparent_60%)] px-3 py-4 sm:px-6 sm:py-5">
 
             {/* Mood selector */}
             {showMoodSelector && (
               <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
-                <div className="max-w-[85%] rounded-3xl rounded-tl-lg border border-border bg-surface px-5 py-4 shadow-card">
+                <div className="w-full rounded-3xl rounded-tl-lg border border-border bg-surface px-4 py-4 shadow-card sm:max-w-[85%] sm:px-5">
                   <div className="mb-1 flex items-center gap-2">
                     <Heart className="h-4 w-4 text-wellness-sage-500" fill="currentColor" />
                     <span className="text-xs font-semibold text-wellness-sage-600 uppercase tracking-wide">Check-in</span>
@@ -244,7 +244,7 @@ export const ChatPage: React.FC = () => {
                         whileHover={{ scale: 1.04 }}
                         whileTap={{ scale: 0.96 }}
                         onClick={() => handleMoodSelect(mood.value, mood.label)}
-                        className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-medium text-text transition ${mood.color}`}
+                        className={`flex min-h-11 items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-medium text-text transition ${mood.color}`}
                       >
                         <span className="text-base">{mood.emoji}</span>
                         <span>{mood.label}</span>
@@ -302,7 +302,7 @@ export const ChatPage: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="mx-auto max-w-md rounded-3xl border border-border bg-surface p-8 text-center shadow-card"
+                className="mx-auto max-w-md rounded-3xl border border-border bg-surface p-5 text-center shadow-card sm:p-8"
               >
                 <motion.div
                   animate={{ y: [0, -6, 0] }}
@@ -369,7 +369,7 @@ export const ChatPage: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleMicClick}
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition ${
                   isRecordingAudio
                     ? 'border-red-300 bg-red-500 text-white shadow'
                     : 'border-border bg-surface text-muted hover:border-wellness-sage-300 hover:text-wellness-sage-600'
@@ -386,7 +386,7 @@ export const ChatPage: React.FC = () => {
                   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
                 }}
                 placeholder={isRecordingAudio ? 'Recording… tap mic to stop' : "Share what's on your mind…"}
-                className="min-h-[42px] max-h-[120px] flex-1 resize-none rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-muted focus:border-wellness-sage-400 focus:ring-1 focus:ring-wellness-sage-400"
+                className="min-h-11 max-h-[120px] min-w-0 flex-1 resize-none rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-text placeholder:text-muted focus:border-wellness-sage-400 focus:ring-1 focus:ring-wellness-sage-400 sm:px-4"
                 disabled={isLoading || isRecordingAudio}
               />
 
@@ -395,13 +395,13 @@ export const ChatPage: React.FC = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isLoading || isRecordingAudio}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-wellness-sage-500 text-white shadow-glow transition hover:bg-wellness-sage-600 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-wellness-sage-500 text-white shadow-glow transition hover:bg-wellness-sage-600 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Send message"
               >
                 <Send className="h-4 w-4" />
               </motion.button>
             </div>
-            <p className="mt-1.5 text-center text-[0.65rem] text-muted">
+            <p className="mt-1.5 hidden text-center text-[0.65rem] text-muted sm:block">
               Press Enter to send · Shift+Enter for new line
               {voiceEnabled && ' · Mic for voice input'}
             </p>

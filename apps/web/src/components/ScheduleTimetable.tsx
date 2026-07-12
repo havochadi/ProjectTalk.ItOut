@@ -6,6 +6,7 @@ type ScheduleBlock = {
   start: string;
   end: string;
   workType?: 'homework' | 'revision';
+  sequence?: number;
 };
 
 const singaporeDate = (iso: string) => new Date(new Date(iso).getTime() + 8 * 60 * 60 * 1000);
@@ -73,6 +74,7 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
                               <Icon className="h-3 w-3" /> {isRevision ? 'Revision' : 'Homework'}
                             </div>
                             <p className="break-words text-[0.68rem] font-semibold leading-snug text-white">{block.title}</p>
+                            {block.sequence && block.sequence > 1 && <p className="mt-0.5 text-[0.58rem] font-medium text-white/40">Part {block.sequence}</p>}
                             <p className="mt-1 text-[0.6rem] text-white/55">{timeLabel(block.start)}–{timeLabel(block.end)}</p>
                           </div>
                         );

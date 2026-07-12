@@ -53,6 +53,9 @@ function mapTask(row: any) {
     dueAt: row.due_at,
     priority: row.priority,
     status: row.status,
+    workType: row.work_type || 'homework',
+    estimatedMinutes: row.estimated_minutes || 60,
+    importance: row.importance || 3,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -307,6 +310,9 @@ export const taskAPI = {
         due_at: input.dueAt || null,
         priority: input.priority || 'med',
         status: input.status || 'todo',
+        work_type: input.workType || 'homework',
+        estimated_minutes: input.estimatedMinutes || 60,
+        importance: input.importance || 3,
       })
       .select()
       .single();
@@ -323,6 +329,9 @@ export const taskAPI = {
       due_at: input.dueAt || null,
       priority: input.priority || 'med',
       status: 'todo',
+      work_type: input.workType || 'homework',
+      estimated_minutes: input.estimatedMinutes || 60,
+      importance: input.importance || 3,
     }));
     const { data, error } = await supabase.from('tasks').insert(rows).select();
     if (error) fail(error);
@@ -332,6 +341,44 @@ export const taskAPI = {
   async generateSchedule(input: any): ApiResponse {
     const data = await invokeAssistant({ action: 'smart_schedule', ...input });
     return { data };
+  },
+
+  async getSavedSchedule(): ApiResponse {
+    const userId = await currentUserId();
+    const { data, error } = await supabase
+      .from('schedule_blocks')
+      .select('*, task:tasks!schedule_blocks_task_owner_fkey(id,title,subject,status,priority,work_type)')
+      .eq('user_id', userId)
+      .order('start_at', { ascending: true });
+    if (error) fail(error);
+    const schedule = (data || [])
+      .filter((row: any) => row.task && row.task.status !== 'done')
+      .map((row: any) => ({
+        id: row.id,
+        taskId: row.task_id,
+        title: row.task.title,
+        subject: row.task.subject,
+        workType: row.task.work_type || 'homework',
+        priority: row.task.priority,
+        start: row.start_at,
+        end: row.end_at,
+        sequence: row.sequence,
+        tip: row.tip,
+      }));
+    return { data: { schedule } };
+  },
+
+  async saveSchedule(blocks: any[]): ApiResponse {
+    const payload = blocks.map((block) => ({
+      taskId: block.taskId,
+      start: block.start,
+      end: block.end,
+      sequence: block.sequence || 1,
+      tip: block.tip || null,
+    }));
+    const { data, error } = await supabase.rpc('replace_schedule_blocks', { p_blocks: payload });
+    if (error) fail(error);
+    return { data: { schedule: data || [] } };
   },
 
   async getAll(params: any = {}): ApiResponse {
@@ -362,6 +409,9 @@ export const taskAPI = {
     if (input.dueAt !== undefined) updates.due_at = input.dueAt;
     if (input.priority !== undefined) updates.priority = input.priority;
     if (input.status !== undefined) updates.status = input.status;
+    if (input.workType !== undefined) updates.work_type = input.workType;
+    if (input.estimatedMinutes !== undefined) updates.estimated_minutes = input.estimatedMinutes;
+    if (input.importance !== undefined) updates.importance = input.importance;
     const { data, error } = await supabase
       .from('tasks')
       .update(updates)
@@ -378,8 +428,13 @@ export const taskAPI = {
     return { data: { message: 'Task deleted' } };
   },
 
-  updateStatus(id: string, status: string) {
-    return this.update(id, { status });
+  async updateStatus(id: string, status: string): ApiResponse {
+    const response = await this.update(id, { status });
+    if (status === 'done') {
+      const { error } = await supabase.from('schedule_blocks').delete().eq('task_id', id);
+      if (error) fail(error);
+    }
+    return response;
   },
 
   async getStudySuggestions(id: string): ApiResponse {

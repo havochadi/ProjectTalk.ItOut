@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarClock, ChevronDown, ChevronUp, Lightbulb, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { taskAPI } from '../api/client';
@@ -17,6 +17,7 @@ type SchedulerInput = {
 };
 
 type ScheduleBlock = {
+  taskId: string;
   title: string;
   subject?: string | null;
   workType?: 'homework' | 'revision';
@@ -24,6 +25,7 @@ type ScheduleBlock = {
   end: string;
   priority: 'low' | 'med' | 'high';
   rank: number;
+  sequence: number;
   tip: string;
 };
 
@@ -50,7 +52,7 @@ const newItem = (): SchedulerInput => ({
   importance: 3,
 });
 
-export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated }) => {
+export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> = ({ tasks, onChanged }) => {
   const [searchParams] = useSearchParams();
   const [isOpen, setIsOpen] = useState(() => searchParams.get('scheduler') === 'open');
   const [items, setItems] = useState<SchedulerInput[]>([newItem()]);
@@ -64,6 +66,15 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
   const [result, setResult] = useState<ScheduleResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [savedSchedule, setSavedSchedule] = useState<ScheduleBlock[]>([]);
+  const scheduledTaskIds = new Set(savedSchedule.map((block) => block.taskId));
+  const unscheduledCount = tasks.filter((task) => task.status !== 'done' && !scheduledTaskIds.has(task._id)).length;
+
+  useEffect(() => {
+    void taskAPI.getSavedSchedule()
+      .then((response) => setSavedSchedule(response.data.schedule || []))
+      .catch(() => setSavedSchedule([]));
+  }, [tasks]);
 
   const updateItem = (id: string, key: keyof SchedulerInput, value: string | number) => {
     setItems((current) => current.map((item) => {
@@ -77,20 +88,43 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
 
   const generate = async () => {
     const validItems = items.filter((item) => item.title.trim());
-    if (!validItems.length) {
-      toast.error('Add at least one thing you need to do.');
-      return;
-    }
     if (!Object.values(preferences.weeklyStartTimes).some(Boolean)) {
       toast.error('Choose a start time for at least one day.');
       return;
     }
     setIsGenerating(true);
     try {
+      let createdTasks: any[] = [];
+      if (validItems.length) {
+        const created = await taskAPI.createMany(validItems.map((item) => ({
+          title: item.title.trim(),
+          subject: item.workType === 'revision' ? 'Revision' : 'Homework',
+          dueAt: item.workType === 'homework' && item.deadline
+            ? new Date(`${item.deadline}T23:59:00`).toISOString()
+            : null,
+          priority: item.importance >= 5 ? 'high' : item.importance >= 3 ? 'med' : 'low',
+          workType: item.workType,
+          estimatedMinutes: item.estimatedMinutes,
+          importance: item.importance,
+        })));
+        createdTasks = created.data.tasks || [];
+        setItems([newItem()]);
+        onChanged();
+      }
+      const openTasks = [...tasks.filter((task) => task.status !== 'done'), ...createdTasks];
+      if (!openTasks.length) {
+        toast.error('Add at least one open To-Do item before building a schedule.');
+        return;
+      }
       const response = await taskAPI.generateSchedule({
-        items: validItems.map((item) => ({
-          ...item,
-          deadline: item.deadline ? new Date(`${item.deadline}T23:59:00`).toISOString() : undefined,
+        items: openTasks.map((task) => ({
+          id: task._id,
+          title: task.title,
+          subject: task.subject,
+          workType: task.workType || 'homework',
+          deadline: task.workType !== 'revision' ? task.dueAt : undefined,
+          estimatedMinutes: task.estimatedMinutes || 60,
+          importance: task.importance || (task.priority === 'high' ? 5 : task.priority === 'low' ? 2 : 3),
         })),
         preferences,
       });
@@ -103,23 +137,16 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
     }
   };
 
-  const createTasks = async () => {
+  const saveTimetable = async () => {
     if (!result?.schedule.length) return;
     setIsCreating(true);
     try {
-      await taskAPI.createMany(result.schedule.map((block) => ({
-        title: block.title,
-        subject: block.subject || (block.workType === 'revision' ? 'Revision' : 'Homework'),
-        dueAt: block.end,
-        priority: block.priority,
-      })));
-      toast.success(`${result.schedule.length} scheduled task${result.schedule.length === 1 ? '' : 's'} added.`);
+      await taskAPI.saveSchedule(result.schedule);
+      setSavedSchedule(result.schedule);
+      toast.success('Your weekly timetable has been saved.');
       setResult(null);
-      setItems([newItem()]);
-      setIsOpen(false);
-      onCreated();
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || 'Could not add the schedule.');
+      toast.error(error?.response?.data?.error || 'Could not save the timetable.');
     } finally {
       setIsCreating(false);
     }
@@ -156,7 +183,9 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h2 className="text-sm font-bold text-white">Add tasks or revision topics</h2>
-                    <p className="text-xs text-white/55">The scheduler decides the order, session length, and rest time.</p>
+                    <p className="text-xs text-white/55">
+                      {tasks.filter((task) => task.status !== 'done').length} open To-Do item{tasks.filter((task) => task.status !== 'done').length === 1 ? '' : 's'} will be included automatically.
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -279,8 +308,26 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
                 className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-wellness-sage-600 px-5 text-sm font-bold text-white shadow-glow hover:bg-wellness-sage-700 disabled:opacity-60 sm:w-auto"
               >
                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {isGenerating ? 'Building your plan…' : 'Build my schedule'}
+                {isGenerating ? 'Building your plan…' : savedSchedule.length ? 'Update my timetable' : 'Build my timetable'}
               </button>
+
+              {!result && savedSchedule.length > 0 && (
+                <div className="space-y-3 border-t border-[#3A3453] pt-5">
+                  <div className="flex flex-wrap items-end justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-wellness-sage-300">Saved timetable</p>
+                      <h2 className="mt-1 text-base font-bold text-white">My weekly plan</h2>
+                    </div>
+                    <p className="text-xs text-white/45">Updates when tasks are completed or deleted.</p>
+                  </div>
+                  {unscheduledCount > 0 && (
+                    <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2.5 text-xs text-amber-100">
+                      {unscheduledCount} open To-Do item{unscheduledCount === 1 ? '' : 's'} {unscheduledCount === 1 ? 'is' : 'are'} not in this timetable yet. Select <strong>Update my timetable</strong> to include {unscheduledCount === 1 ? 'it' : 'them'}.
+                    </div>
+                  )}
+                  <ScheduleTimetable blocks={savedSchedule} />
+                </div>
+              )}
 
               {result && (
                 <div className="space-y-5 border-t border-[#3A3453] pt-5">
@@ -325,12 +372,12 @@ export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated 
 
                   <button
                     type="button"
-                    onClick={createTasks}
+                    onClick={saveTimetable}
                     disabled={isCreating}
                     className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#13111C] px-5 text-sm font-bold text-white hover:bg-wellness-sage-800 disabled:opacity-60 sm:w-auto"
                   >
                     {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
-                    {isCreating ? 'Adding schedule…' : `Add ${result.schedule.length} blocks to To-Do`}
+                    {isCreating ? 'Saving timetable…' : 'Save this timetable'}
                   </button>
                 </div>
               )}

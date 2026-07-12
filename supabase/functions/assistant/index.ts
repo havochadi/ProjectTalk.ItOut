@@ -58,6 +58,7 @@ function suggestAppFeature(text: string, severity: number) {
 }
 
 type SchedulerItem = {
+  id: string;
   title: string;
   subject?: string;
   workType: 'homework' | 'revision';
@@ -137,6 +138,7 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
         end = new Date(cursor!.getTime() + blockMinutes * 60_000);
       }
       schedule.push({
+        taskId: item.id,
         title: blocks > 1 ? `${item.title} (${block}/${blocks})` : item.title,
         subject: item.subject || null,
         workType: item.workType,
@@ -144,6 +146,7 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
         end: end.toISOString(),
         priority: item.importance >= 4 ? 'high' : item.importance >= 3 ? 'med' : 'low',
         rank: item.rank,
+        sequence: block,
         tip: block < blocks ? 'Stop at the end of this session—the next part is already scheduled.' : 'Use the final five minutes to check your work.',
       });
       remaining -= blockMinutes;
@@ -247,6 +250,9 @@ Deno.serve(async (request) => {
       const rawItems = Array.isArray(body.items) ? body.items : [];
       const items: SchedulerItem[] = rawItems
         .map((item: Record<string, unknown>) => ({
+          // A temporary ID keeps older frontend builds preview-compatible; the
+          // persistent scheduler always supplies the canonical task UUID.
+          id: String(item.id || crypto.randomUUID()),
           title: String(item.title || '').trim().slice(0, 500),
           subject: String(item.subject || '').trim().slice(0, 200),
           workType: item.workType === 'revision' ? 'revision' : 'homework',

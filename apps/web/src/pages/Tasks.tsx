@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button, Input, Modal } from '@talkitout/ui';
 import { taskAPI } from '../api/client';
 import toast from 'react-hot-toast';
-import { Plus, Trash2, Lightbulb, CheckCircle, Circle, Loader2, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Lightbulb, CheckCircle, Circle, Loader2, TrendingUp, Pencil } from 'lucide-react';
 import { SmartScheduler } from '../components/SmartScheduler';
 
 interface StudySuggestion {
@@ -35,7 +35,8 @@ const priorityStyle: Record<string, string> = {
 export const TasksPage: React.FC = () => {
   const [tasks, setTasks] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newTask, setNewTask] = useState({ title: '', subject: '', priority: 'med', dueAt: '' });
+  const [newTask, setNewTask] = useState({ title: '', subject: '', priority: 'med', dueAt: '', workType: 'homework', estimatedMinutes: 60 });
+  const [editingTask, setEditingTask] = useState<any | null>(null);
   const [selectedTaskForTips, setSelectedTaskForTips] = useState<any | null>(null);
   const [studySuggestions, setStudySuggestions] = useState<StudySuggestion[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
@@ -75,17 +76,47 @@ export const TasksPage: React.FC = () => {
     finally { setIsLoadingSuggestions(false); }
   };
 
-  const handleCreate = async () => {
+  const resetTaskForm = () => {
+    setNewTask({ title: '', subject: '', priority: 'med', dueAt: '', workType: 'homework', estimatedMinutes: 60 });
+    setEditingTask(null);
+    setIsModalOpen(false);
+  };
+
+  const openTaskEditor = (task?: any) => {
+    if (task) {
+      setEditingTask(task);
+      setNewTask({
+        title: task.title || '',
+        subject: task.subject || '',
+        priority: task.priority || 'med',
+        dueAt: task.dueAt ? new Date(task.dueAt).toISOString().slice(0, 16) : '',
+        workType: task.workType || 'homework',
+        estimatedMinutes: task.estimatedMinutes || 60,
+      });
+    } else {
+      setEditingTask(null);
+      setNewTask({ title: '', subject: '', priority: 'med', dueAt: '', workType: 'homework', estimatedMinutes: 60 });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async () => {
     try {
-      const data: any = { title: newTask.title, priority: newTask.priority };
-      if (newTask.subject.trim()) data.subject = newTask.subject;
-      if (newTask.dueAt.trim()) data.dueAt = newTask.dueAt;
-      await taskAPI.create(data);
-      toast.success('Task added!');
-      setIsModalOpen(false);
-      setNewTask({ title: '', subject: '', priority: 'med', dueAt: '' });
+      const data: any = {
+        title: newTask.title,
+        priority: newTask.priority,
+        workType: newTask.workType,
+        estimatedMinutes: newTask.estimatedMinutes,
+        importance: newTask.priority === 'high' ? 5 : newTask.priority === 'low' ? 2 : 3,
+        dueAt: newTask.workType === 'revision' ? null : (newTask.dueAt ? new Date(newTask.dueAt).toISOString() : null),
+        subject: newTask.subject.trim() || null,
+      };
+      if (editingTask) await taskAPI.update(editingTask._id, data);
+      else await taskAPI.create(data);
+      toast.success(editingTask ? 'Task updated!' : 'Task added!');
+      resetTaskForm();
       loadTasks();
-    } catch (e: any) { toast.error(e?.response?.data?.message || 'Failed to create task'); }
+    } catch (e: any) { toast.error(e?.response?.data?.message || 'Failed to save task'); }
   };
 
   const handleStatusChange = async (taskId: string, status: string) => {
@@ -116,7 +147,7 @@ export const TasksPage: React.FC = () => {
         <motion.button
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.96 }}
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => openTaskEditor()}
           className="flex items-center gap-2 rounded-xl bg-wellness-sage-500 px-4 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:bg-wellness-sage-600"
         >
           <Plus className="h-4 w-4" />
@@ -124,7 +155,7 @@ export const TasksPage: React.FC = () => {
         </motion.button>
       </div>
 
-      <SmartScheduler onCreated={loadTasks} />
+      <SmartScheduler tasks={tasks} onChanged={loadTasks} />
 
       {/* Kanban */}
       <div className="grid gap-5 md:grid-cols-3">
@@ -150,11 +181,20 @@ export const TasksPage: React.FC = () => {
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <p className="text-sm font-semibold text-text leading-snug">{task.title}</p>
-                      <button onClick={() => handleDelete(task._id)} className="shrink-0 text-muted hover:text-red-500 transition-colors">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button onClick={() => openTaskEditor(task)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-surface-alt hover:text-wellness-sage-500" aria-label={`Edit ${task.title}`}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button onClick={() => handleDelete(task._id)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-500" aria-label={`Delete ${task.title}`}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
 
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[0.65rem]">
+                      <span className="rounded-full border border-border bg-surface-alt px-2 py-0.5 font-semibold capitalize text-muted">{task.workType || 'homework'}</span>
+                      <span className="text-muted">{task.estimatedMinutes || 60} min</span>
+                    </div>
                     {task.subject && <p className="mb-2 text-xs text-muted">{task.subject}</p>}
                     {task.dueAt && (
                       <p className="mb-2 text-xs text-muted">
@@ -280,10 +320,25 @@ export const TasksPage: React.FC = () => {
       </Modal>
 
       {/* Create Task Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add a task">
+      <Modal isOpen={isModalOpen} onClose={resetTaskForm} title={editingTask ? 'Edit task' : 'Add a task'}>
         <div className="space-y-4">
           <Input label="Task title" value={newTask.title} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTask((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. Complete Math homework" />
           <Input label="Subject (optional)" value={newTask.subject} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTask((p) => ({ ...p, subject: e.target.value }))} placeholder="Mathematics" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-text">Type of work</label>
+              <select value={newTask.workType} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNewTask((p) => ({ ...p, workType: e.target.value, dueAt: e.target.value === 'revision' ? '' : p.dueAt }))} className="w-full rounded-xl border border-border bg-surface-alt px-3 py-2.5 text-sm text-text focus:border-wellness-sage-400 focus:outline-none">
+                <option value="homework">Homework</option>
+                <option value="revision">Revision</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-text">Time needed</label>
+              <select value={newTask.estimatedMinutes} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNewTask((p) => ({ ...p, estimatedMinutes: Number(e.target.value) }))} className="w-full rounded-xl border border-border bg-surface-alt px-3 py-2.5 text-sm text-text focus:border-wellness-sage-400 focus:outline-none">
+                <option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option><option value="180">3 hours</option>
+              </select>
+            </div>
+          </div>
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-text">Priority</label>
             <select
@@ -296,11 +351,11 @@ export const TasksPage: React.FC = () => {
               <option value="high">High</option>
             </select>
           </div>
-          <Input label="Due date (optional)" type="datetime-local" value={newTask.dueAt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTask((p) => ({ ...p, dueAt: e.target.value }))} />
+          {newTask.workType === 'homework' && <Input label="Due date (optional)" type="datetime-local" value={newTask.dueAt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTask((p) => ({ ...p, dueAt: e.target.value }))} />}
           <div className="flex justify-end gap-2 pt-1">
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={!newTask.title} className="bg-wellness-sage-500 text-white hover:bg-wellness-sage-600">
-              Add task
+            <Button variant="secondary" onClick={resetTaskForm}>Cancel</Button>
+            <Button onClick={handleSave} disabled={!newTask.title} className="bg-wellness-sage-500 text-white hover:bg-wellness-sage-600">
+              {editingTask ? 'Save changes' : 'Add task'}
             </Button>
           </div>
         </div>

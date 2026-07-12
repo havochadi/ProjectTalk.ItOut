@@ -58,7 +58,11 @@ export const LoginPage: React.FC = () => {
             animate={{ y: [0, -8, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <img src="/TIO.png" alt="Talk.ItOut" className="h-40 w-40 object-contain mx-auto drop-shadow-lg" />
+            <img
+              src={`${import.meta.env.BASE_URL}TIO.png`}
+              alt="Talk.ItOut"
+              className="h-40 w-40 object-contain mx-auto drop-shadow-lg"
+            />
           </motion.div>
 
           <h1 className="text-4xl font-bold mb-4 tracking-tight">Talk.ItOut</h1>
@@ -93,7 +97,11 @@ export const LoginPage: React.FC = () => {
         >
           {/* Mobile logo */}
           <div className="mb-8 text-center lg:hidden">
-            <img src="/TIO.png" alt="Talk.ItOut" className="h-20 w-20 object-contain mx-auto mb-3" />
+            <img
+              src={`${import.meta.env.BASE_URL}TIO.png`}
+              alt="Talk.ItOut"
+              className="h-20 w-20 object-contain mx-auto mb-3"
+            />
             <h1 className="text-2xl font-bold text-text">Talk.ItOut</h1>
             <p className="text-sm text-muted">Your mental wellness companion</p>
           </div>

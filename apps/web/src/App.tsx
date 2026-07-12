@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
@@ -103,7 +103,7 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
       <div className="app-shell min-h-screen bg-bg text-text transition-colors duration-300">
-        <BrowserRouter>
+        <HashRouter>
           <AuthProvider>
             <SocketProvider>
               <ErrorBoundary
@@ -127,7 +127,7 @@ const App: React.FC = () => {
               />
             </SocketProvider>
           </AuthProvider>
-        </BrowserRouter>
+        </HashRouter>
       </div>
     </ThemeProvider>
   );

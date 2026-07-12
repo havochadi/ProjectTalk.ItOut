@@ -45,7 +45,11 @@ export const RegisterPage: React.FC = () => {
       >
         {/* Header */}
         <div className="mb-8 text-center">
-          <img src="/TIO.png" alt="Talk.ItOut" className="h-16 w-16 object-contain mx-auto mb-4" />
+          <img
+            src={`${import.meta.env.BASE_URL}TIO.png`}
+            alt="Talk.ItOut"
+            className="h-16 w-16 object-contain mx-auto mb-4"
+          />
           <h1 className="text-2xl font-bold text-text">Create your account</h1>
           <p className="text-sm text-muted mt-1">Start your wellness journey today</p>
         </div>

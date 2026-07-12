@@ -44,7 +44,7 @@ export const Header: React.FC = () => {
         {/* Logo */}
         <Link to="/" className="group flex items-center gap-2.5 text-lg font-bold tracking-tight text-text">
           <img
-            src="/TIO.png"
+            src={`${import.meta.env.BASE_URL}TIO.png`}
             alt="TIO logo"
             className="h-8 w-8 shrink-0 object-contain transition-transform duration-300 group-hover:scale-105"
           />

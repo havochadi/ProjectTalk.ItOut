@@ -227,6 +227,24 @@ npm run test --workspace=@talkitout/web
 7. Configure backup strategy
 8. Review security headers
 
+### GitHub Pages (frontend only)
+
+GitHub Pages can host the compiled React frontend, but it cannot run the
+Express API, MongoDB, Socket.IO, or server-side AI integrations. Deploy those
+services to a separate HTTPS host first.
+
+1. In the repository, open **Settings → Pages** and set **Source** to
+   **GitHub Actions**.
+2. Open **Settings → Secrets and variables → Actions → Variables** and add a
+   repository variable named `VITE_API_URL` whose value is the public HTTPS URL
+   of the deployed API (for example, `https://api.example.com`).
+3. On the API host, set `ALLOWED_ORIGINS=https://havochadi.github.io`.
+4. Push to `main`. The **Deploy web app to GitHub Pages** workflow will publish
+   `apps/web/dist` to `https://havochadi.github.io/ProjectTalk.ItOut/`.
+
+The Pages build uses hash-based frontend routes (for example, `#/login`) so
+refreshing a route does not produce another GitHub Pages 404.
+
 ## Contributing
 
 1. Fork the repository

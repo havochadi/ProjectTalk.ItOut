@@ -19,7 +19,11 @@ export function AvatarCanvas({
     >
       <div className="absolute inset-0 bg-black" />
       <div className={isSpeaking ? 'talkio-avatar talkio-avatar-speaking' : 'talkio-avatar'}>
-        <img src="/TIO.png" alt="TIO animated avatar" className="h-full w-full object-cover" />
+        <img
+          src={`${import.meta.env.BASE_URL}TIO.png`}
+          alt="TIO animated avatar"
+          className="h-full w-full object-cover"
+        />
       </div>
       <style>{`
         .talkio-avatar {

@@ -42,13 +42,18 @@ async function generateGemini(prompt: string) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.65, maxOutputTokens: 900 },
+        generationConfig: { temperature: 0.65, maxOutputTokens: 2048 },
       }),
+      signal: AbortSignal.timeout(20_000),
     }
   );
   const payload = await response.json();
   if (!response.ok) throw new Error(payload?.error?.message || 'Gemini request failed');
-  const text = payload?.candidates?.[0]?.content?.parts
+  const candidate = payload?.candidates?.[0];
+  if (candidate?.finishReason === 'MAX_TOKENS') {
+    throw new Error('Gemini response was truncated');
+  }
+  const text = candidate?.content?.parts
     ?.map((part: { text?: string }) => part.text || '')
     .join('')
     .trim();
@@ -159,7 +164,8 @@ Deno.serve(async (request) => {
     try {
       responseText = await generateGemini(
         `You are Talk.ItOut, a supportive, non-clinical study and wellbeing companion for Singapore students aged 10-19. ` +
-          `Use warm, concise language. Never diagnose, claim to be a therapist, or replace professional help. ` +
+          `Use warm, concise language. Reply in no more than 140 words and always finish every sentence and thought. ` +
+          `Never diagnose, claim to be a therapist, or replace professional help. ` +
           `Offer one or two practical next steps and encourage a trusted adult when distress is significant. ` +
           `The student's name is ${profile.name}. Risk severity is ${analysis.severity}/3.\n\nConversation:\n${context}\nassistant:`
       );

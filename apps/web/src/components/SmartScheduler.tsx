@@ -233,15 +233,8 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
                           )}
                         </label>
                         <label>
-                          <span className="mb-1 block text-xs font-semibold text-white/80">Total time needed</span>
-                          <select className={fieldClass} value={item.estimatedMinutes} onChange={(event) => updateItem(item.id, 'estimatedMinutes', Number(event.target.value))}>
-                            <option value="30">30 minutes</option>
-                            <option value="45">45 minutes</option>
-                            <option value="60">1 hour</option>
-                            <option value="90">1.5 hours</option>
-                            <option value="120">2 hours</option>
-                            <option value="180">3 hours</option>
-                          </select>
+                          <span className="mb-1 block text-xs font-semibold text-white/80">Total minutes needed</span>
+                          <input type="number" min="15" step="15" className={fieldClass} value={item.estimatedMinutes} onChange={(event) => updateItem(item.id, 'estimatedMinutes', Number(event.target.value))} />
                         </label>
                         <label>
                           <span className="mb-1 block text-xs font-semibold text-white/80">Priority</span>

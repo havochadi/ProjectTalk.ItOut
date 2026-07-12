@@ -3,11 +3,13 @@ import { Outlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Header } from './Header';
 import { Phone } from 'lucide-react';
+import { ScheduleCompanion } from './ScheduleCompanion';
 
 export const Layout: React.FC = () => {
   return (
     <div className="flex min-h-screen flex-col bg-bg text-text transition-colors duration-300">
       <Header />
+      <ScheduleCompanion />
       <main className="flex-1 px-3 py-4 sm:px-4 sm:py-6 md:px-8 md:py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button, Input, Modal } from '@talkitout/ui';
 import { taskAPI } from '../api/client';
 import toast from 'react-hot-toast';
-import { Plus, Trash2, Lightbulb, CheckCircle, Circle, Loader2, TrendingUp, Pencil } from 'lucide-react';
+import { Plus, Trash2, Lightbulb, Circle, Loader2, Pencil } from 'lucide-react';
 import { SmartScheduler } from '../components/SmartScheduler';
 
 interface StudySuggestion {
@@ -12,18 +12,10 @@ interface StudySuggestion {
   timeEstimate: string;
 }
 
-interface TaskSummary {
-  overview: string;
-  totalTasks: number;
-  completionRate: number;
-  suggestions: string[];
-  motivationalMessage: string;
-}
-
 const columns = [
-  { status: 'todo',  label: 'To Do',  color: 'bg-wellness-sage-50', ring: 'border-wellness-sage-200',  dot: 'bg-wellness-sage-300' },
-  { status: 'doing', label: 'Doing',  color: 'bg-wellness-sky-50',  ring: 'border-wellness-sky-200',   dot: 'bg-wellness-sky-400' },
-  { status: 'done',  label: 'Done',   color: 'bg-wellness-lavender-50', ring: 'border-wellness-lavender-200', dot: 'bg-wellness-lavender-400' },
+  { status: 'todo',  label: 'To Do',  color: 'bg-[#211D32]', ring: 'border-[#3A3453]', dot: 'bg-wellness-sage-400' },
+  { status: 'doing', label: 'Doing',  color: 'bg-[#172430]', ring: 'border-[#29465A]', dot: 'bg-wellness-sky-400' },
+  { status: 'done',  label: 'Done',   color: 'bg-[#201B2C]', ring: 'border-[#3F3655]', dot: 'bg-wellness-lavender-400' },
 ];
 
 const priorityStyle: Record<string, string> = {
@@ -40,7 +32,6 @@ export const TasksPage: React.FC = () => {
   const [selectedTaskForTips, setSelectedTaskForTips] = useState<any | null>(null);
   const [studySuggestions, setStudySuggestions] = useState<StudySuggestion[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [taskSummary, setTaskSummary] = useState<TaskSummary | null>(null);
 
   useEffect(() => { loadTasks(); }, []);
 
@@ -49,17 +40,7 @@ export const TasksPage: React.FC = () => {
       const res = await taskAPI.getAll();
       const payload = res?.data?.tasks ?? res?.data ?? [];
       setTasks(Array.isArray(payload) ? payload : []);
-      loadSummary();
     } catch { toast.error('Failed to load tasks'); setTasks([]); }
-  };
-
-  const loadSummary = async () => {
-    try {
-      const res = await taskAPI.getSummary();
-      setTaskSummary(res?.data?.summary ?? res?.data ?? null);
-    } catch {
-      // The task board remains usable when the optional summary is unavailable.
-    }
   };
 
   const loadStudyTips = async (taskId: string) => {
@@ -123,7 +104,6 @@ export const TasksPage: React.FC = () => {
     try {
       await taskAPI.updateStatus(taskId, status);
       setTasks((prev) => prev.map((t) => (t._id === taskId ? { ...t, status } : t)));
-      loadSummary();
     } catch { toast.error('Failed to update task'); }
   };
 
@@ -135,6 +115,10 @@ export const TasksPage: React.FC = () => {
       toast.success('Task removed');
     } catch { toast.error('Failed to delete task'); }
   };
+
+  const completedCount = tasks.filter((task) => task.status === 'done').length;
+  const remainingCount = tasks.length - completedCount;
+  const progressPercent = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -155,6 +139,23 @@ export const TasksPage: React.FC = () => {
         </motion.button>
       </div>
 
+      <div className="flex flex-col gap-3 rounded-2xl border border-[#3A3453] bg-[#211D32] px-4 py-3 text-white shadow-card sm:flex-row sm:items-center">
+        <div className="shrink-0">
+          <p className="text-xs font-bold uppercase tracking-wide text-white/45">Your progress</p>
+          <p className="mt-0.5 text-sm font-semibold">
+            {remainingCount ? `${remainingCount} item${remainingCount === 1 ? '' : 's'} left to complete` : tasks.length ? 'Everything is complete — well done!' : 'No tasks added yet'}
+          </p>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex justify-between text-[0.65rem] text-white/50">
+            <span>{completedCount} of {tasks.length} done</span><span>{progressPercent}%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-black/25">
+            <motion.div initial={false} animate={{ width: `${progressPercent}%` }} className="h-full rounded-full bg-wellness-sage-500" />
+          </div>
+        </div>
+      </div>
+
       <SmartScheduler tasks={tasks} onChanged={loadTasks} />
 
       {/* Kanban */}
@@ -163,10 +164,10 @@ export const TasksPage: React.FC = () => {
           const colTasks = tasks.filter((t) => t.status === col.status);
           return (
             <div key={col.status} className={`rounded-2xl border ${col.ring} ${col.color} p-4`}>
-              <div className="mb-4 flex items-center gap-2 border-b border-wellness-neutral-800/15 pb-3">
+              <div className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3">
                 <div className={`h-2.5 w-2.5 rounded-full ${col.dot}`} />
-                <span className="text-sm font-bold text-wellness-neutral-900">{col.label}</span>
-                <span className="ml-auto rounded-full bg-white/90 px-2 py-0.5 text-xs font-bold text-wellness-neutral-700 shadow-sm">{colTasks.length}</span>
+                <span className="text-sm font-bold text-white">{col.label}</span>
+                <span className="ml-auto rounded-full bg-black/25 px-2 py-0.5 text-xs font-bold text-white/70">{colTasks.length}</span>
               </div>
 
               <div className="space-y-3 min-h-[80px]">
@@ -177,27 +178,27 @@ export const TasksPage: React.FC = () => {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     whileHover={{ y: -2 }}
-                    className="rounded-xl border border-border bg-surface p-4 shadow-card transition-shadow hover:shadow-card-hover"
+                    className="rounded-xl border border-white/10 bg-[#13111C] p-4 shadow-card transition-shadow hover:border-white/20 hover:shadow-card-hover"
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <p className="text-sm font-semibold text-text leading-snug">{task.title}</p>
+                      <p className="text-sm font-semibold leading-snug text-white">{task.title}</p>
                       <div className="flex shrink-0 items-center gap-1">
-                        <button onClick={() => openTaskEditor(task)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-surface-alt hover:text-wellness-sage-500" aria-label={`Edit ${task.title}`}>
+                        <button onClick={() => openTaskEditor(task)} className="flex h-8 w-8 items-center justify-center rounded-lg text-white/45 hover:bg-white/5 hover:text-wellness-sage-300" aria-label={`Edit ${task.title}`}>
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
-                        <button onClick={() => handleDelete(task._id)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-500" aria-label={`Delete ${task.title}`}>
+                        <button onClick={() => handleDelete(task._id)} className="flex h-8 w-8 items-center justify-center rounded-lg text-white/45 hover:bg-red-500/10 hover:text-red-300" aria-label={`Delete ${task.title}`}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </div>
 
                     <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[0.65rem]">
-                      <span className="rounded-full border border-border bg-surface-alt px-2 py-0.5 font-semibold capitalize text-muted">{task.workType || 'homework'}</span>
-                      <span className="text-muted">{task.estimatedMinutes || 60} min</span>
+                      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 font-semibold capitalize text-white/60">{task.workType || 'homework'}</span>
+                      <span className="text-white/50">{task.estimatedMinutes || 60} min</span>
                     </div>
-                    {task.subject && <p className="mb-2 text-xs text-muted">{task.subject}</p>}
+                    {task.subject && <p className="mb-2 text-xs text-white/50">{task.subject}</p>}
                     {task.dueAt && (
-                      <p className="mb-2 text-xs text-muted">
+                      <p className="mb-2 text-xs text-white/50">
                         Due {new Date(task.dueAt).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}
                       </p>
                     )}
@@ -209,7 +210,7 @@ export const TasksPage: React.FC = () => {
                       <select
                         value={task.status}
                         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleStatusChange(task._id, e.target.value)}
-                        className="rounded-lg border border-border bg-surface-alt px-2 py-1 text-xs text-text focus:outline-none"
+                        className="rounded-lg border border-white/10 bg-[#211D32] px-2 py-1 text-xs text-white focus:outline-none"
                       >
                         <option value="todo">To Do</option>
                         <option value="doing">Doing</option>
@@ -219,7 +220,7 @@ export const TasksPage: React.FC = () => {
 
                     <button
                       onClick={() => loadStudyTips(task._id)}
-                      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-wellness-sage-50 border border-wellness-sage-200 py-1.5 text-xs font-semibold text-wellness-sage-700 transition hover:bg-wellness-sage-100"
+                      className="mt-3 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-wellness-sage-400/30 bg-wellness-sage-500/10 py-1.5 text-xs font-semibold text-wellness-sage-300 transition hover:bg-wellness-sage-500/20"
                     >
                       <Lightbulb className="h-3.5 w-3.5" />
                       Get study tips
@@ -228,8 +229,8 @@ export const TasksPage: React.FC = () => {
                 ))}
 
                 {colTasks.length === 0 && (
-                  <div className="flex items-center justify-center rounded-xl border border-dashed border-wellness-neutral-700/30 bg-white/20 py-6">
-                    <span className="text-xs font-medium text-wellness-neutral-700">No tasks here</span>
+                  <div className="flex items-center justify-center rounded-xl border border-dashed border-white/15 bg-black/10 py-6">
+                    <span className="text-xs font-medium text-white/40">No tasks here</span>
                   </div>
                 )}
               </div>
@@ -237,53 +238,6 @@ export const TasksPage: React.FC = () => {
           );
         })}
       </div>
-
-      {/* Progress Summary */}
-      {taskSummary && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card-wellness p-6"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="h-5 w-5 text-wellness-sage-500" />
-            <h2 className="text-base font-bold text-text">Progress overview</h2>
-          </div>
-
-          <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-            {[
-              { label: 'Total tasks', val: taskSummary.totalTasks, color: 'text-wellness-sage-600' },
-              { label: 'Completed', val: `${taskSummary.completionRate}%`, color: 'text-wellness-lavender-600' },
-              { label: 'Your note', val: '💬', color: 'text-wellness-sky-600' },
-            ].map(({ label, val, color }) => (
-              <div key={label} className="rounded-xl bg-surface-alt border border-border p-4 text-center">
-                <p className={`text-2xl font-bold ${color}`}>{val}</p>
-                <p className="text-xs text-muted mt-1">{label}</p>
-              </div>
-            ))}
-          </div>
-
-          {taskSummary.motivationalMessage && (
-            <div className="mb-4 rounded-xl border border-wellness-sage-100 bg-wellness-sage-50 px-4 py-3">
-              <p className="text-sm text-wellness-sage-700 font-medium">{taskSummary.motivationalMessage}</p>
-            </div>
-          )}
-
-          {taskSummary.suggestions?.length > 0 && (
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Suggestions for you</p>
-              <ul className="space-y-1.5">
-                {taskSummary.suggestions.map((s, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-muted">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-wellness-sage-400" />
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </motion.div>
-      )}
 
       {/* Study Tips Modal */}
       <Modal
@@ -333,10 +287,8 @@ export const TasksPage: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-text">Time needed</label>
-              <select value={newTask.estimatedMinutes} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNewTask((p) => ({ ...p, estimatedMinutes: Number(e.target.value) }))} className="w-full rounded-xl border border-border bg-surface-alt px-3 py-2.5 text-sm text-text focus:border-wellness-sage-400 focus:outline-none">
-                <option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option><option value="180">3 hours</option>
-              </select>
+              <label className="mb-1.5 block text-sm font-semibold text-text">Total minutes needed</label>
+              <input type="number" min="15" step="15" value={newTask.estimatedMinutes} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTask((p) => ({ ...p, estimatedMinutes: Number(e.target.value) }))} className="w-full rounded-xl border border-border bg-surface-alt px-3 py-2.5 text-sm text-text focus:border-wellness-sage-400 focus:outline-none" />
             </div>
           </div>
           <div>

@@ -9,6 +9,10 @@ function fail(error: any): never {
   throw wrapped;
 }
 
+function announceScheduleChange() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('talkitout:schedule-changed'));
+}
+
 function unwrap<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
@@ -378,6 +382,7 @@ export const taskAPI = {
     }));
     const { data, error } = await supabase.rpc('replace_schedule_blocks', { p_blocks: payload });
     if (error) fail(error);
+    announceScheduleChange();
     return { data: { schedule: data || [] } };
   },
 
@@ -419,12 +424,25 @@ export const taskAPI = {
       .select()
       .single();
     if (error) fail(error);
+    const affectsSchedule = [
+      input.dueAt,
+      input.priority,
+      input.workType,
+      input.estimatedMinutes,
+      input.importance,
+    ].some((value) => value !== undefined);
+    if (affectsSchedule) {
+      const { error: scheduleError } = await supabase.from('schedule_blocks').delete().eq('task_id', id);
+      if (scheduleError) fail(scheduleError);
+      announceScheduleChange();
+    }
     return { data: mapTask(data) };
   },
 
   async delete(id: string): ApiResponse {
     const { error } = await supabase.from('tasks').delete().eq('id', id);
     if (error) fail(error);
+    announceScheduleChange();
     return { data: { message: 'Task deleted' } };
   },
 
@@ -433,6 +451,7 @@ export const taskAPI = {
     if (status === 'done') {
       const { error } = await supabase.from('schedule_blocks').delete().eq('task_id', id);
       if (error) fail(error);
+      announceScheduleChange();
     }
     return response;
   },
@@ -868,39 +887,6 @@ export const privacyAPI = {
   },
 };
 
-export const adminAPI = {
-  async getHealth(): ApiResponse {
-    requireSupabaseConfig();
-    const { error } = await supabase.from('profiles').select('id').limit(1);
-    return {
-      data: { status: error ? 'error' : 'ok', database: error ? 'disconnected' : 'connected' },
-    };
-  },
-  async getConfig(): ApiResponse {
-    return {
-      data: {
-        environment: import.meta.env.MODE,
-        apiVersion: 'supabase-1.0',
-        features: { chat: true, pomodoro: true, checkIns: true, tasks: true, riskDetection: true },
-        crisis: { emergency: '999', sosLine: '1767', sosText: '9151 1767' },
-      },
-    };
-  },
-  async getStats(): ApiResponse {
-    const tables = ['profiles', 'tasks', 'check_ins', 'chat_messages', 'risk_flags'];
-    const collections = await Promise.all(
-      tables.map(async (name) => {
-        const { count, error } = await supabase
-          .from(name)
-          .select('*', { count: 'exact', head: true });
-        if (error) fail(error);
-        return { name, count: count || 0 };
-      })
-    );
-    return { data: { database: 'supabase', collections } };
-  },
-};
-
 const counselorMessageSelect = `
   *,
   from_user:profiles!counselor_messages_from_user_id_fkey(*),
@@ -1012,11 +998,8 @@ export const counselorMessagesAPI = {
   },
 };
 
-// Compatibility wrapper for the existing optional voice client. Requests are
-// routed to the Supabase `voice` Edge Function instead of an Express server.
-export const api = {
-  async get(path: string): ApiResponse {
-    if (path !== '/voice/config') fail(new Error(`Unsupported Supabase API path: ${path}`));
+export const voiceAPI = {
+  async getConfig(): ApiResponse {
     const { data, error } = await supabase.functions.invoke('voice', {
       body: { action: 'config' },
       headers: { 'x-talkitout-action': 'config' },
@@ -1025,12 +1008,10 @@ export const api = {
     return { data };
   },
 
-  async post(path: string, body: any, _config?: any): ApiResponse {
-    const action = path === '/voice/tts' ? 'tts' : path === '/voice/stt' ? 'stt' : '';
-    if (!action) fail(new Error(`Unsupported Supabase API path: ${path}`));
+  async textToSpeech(text: string, voiceId: string): ApiResponse {
     const { data, error } = await supabase.functions.invoke('voice', {
-      body,
-      headers: { 'x-talkitout-action': action },
+      body: { text, voiceId },
+      headers: { 'x-talkitout-action': 'tts' },
     });
     if (error) fail(error);
     return { data };

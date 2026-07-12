@@ -257,7 +257,7 @@ Deno.serve(async (request) => {
           subject: String(item.subject || '').trim().slice(0, 200),
           workType: item.workType === 'revision' ? 'revision' : 'homework',
           deadline: item.workType !== 'revision' && item.deadline ? String(item.deadline) : undefined,
-          estimatedMinutes: Math.min(720, Math.max(15, Number(item.estimatedMinutes) || 60)),
+          estimatedMinutes: Math.max(15, Math.round(Number(item.estimatedMinutes) || 60)),
           importance: Math.min(5, Math.max(1, Number(item.importance) || 3)),
         }))
         .filter((item: SchedulerItem) => item.title);

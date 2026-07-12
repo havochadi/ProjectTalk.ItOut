@@ -4,6 +4,7 @@ import { CalendarClock, ChevronDown, ChevronUp, Lightbulb, Loader2, Plus, Sparkl
 import { taskAPI } from '../api/client';
 import toast from 'react-hot-toast';
 import { ScheduleTimetable } from './ScheduleTimetable';
+import { useSearchParams } from 'react-router-dom';
 
 type SchedulerInput = {
   id: string;
@@ -50,7 +51,8 @@ const newItem = (): SchedulerInput => ({
 });
 
 export const SmartScheduler: React.FC<{ onCreated: () => void }> = ({ onCreated }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [isOpen, setIsOpen] = useState(() => searchParams.get('scheduler') === 'open');
   const [items, setItems] = useState<SchedulerInput[]>([newItem()]);
   const [preferences, setPreferences] = useState({
     startDate: new Date().toLocaleDateString('en-CA'),

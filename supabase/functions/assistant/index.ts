@@ -34,23 +34,24 @@ function analyzeRisk(text: string) {
 function suggestAppFeature(text: string, severity: number) {
   if (severity >= 3) return null;
   const normalized = text.toLowerCase();
-  const planningPattern = /\b(homework|assignment|assignments|deadline|deadlines|revision|study plan|schedule|organize|organise|where to start|too much work|workload)\b/;
-  const focusPattern = /\b(burnout|burned out|burnt out|exhausted|drained|cannot focus|can't focus|concentrate|distracted|focus session|need a break)\b/;
+  const focusPattern = /\b(burnout|burned out|burnt out|exhausted|drained|no energy|mentally tired|overwhelmed|stressed out|cannot focus|can't focus|struggling to focus|concentrate|distracted|need a break|need to rest)\b/;
+  const planningPattern = /\b(homework|assignment|assignments|deadline|deadlines|revision|exam|exams|study plan|schedule|organize|organise|where to start|where do i start|too much work|workload|manage my time|plan my week|falling behind|too many tasks|too many things)\b/;
 
-  if (planningPattern.test(normalized)) {
-    return {
-      id: 'tasks',
-      label: 'Open To-Do',
-      path: '/app/tasks',
-      description: 'Break your workload into small, manageable tasks.',
-    };
-  }
+  // Wellbeing needs take precedence when a message also mentions schoolwork.
   if (focusPattern.test(normalized)) {
     return {
       id: 'focus',
-      label: 'Open Focus',
+      label: 'Try Focus & Breathe',
       path: '/app/focus',
-      description: 'Use a short focus block with a proper break afterward.',
+      description: 'Use a guided focus session, breathing exercise, or grounding break.',
+    };
+  }
+  if (planningPattern.test(normalized)) {
+    return {
+      id: 'tasks',
+      label: 'Open Smart Scheduler',
+      path: '/app/tasks?scheduler=open',
+      description: 'Rank homework and revision, then build a manageable weekly timetable.',
     };
   }
   return null;

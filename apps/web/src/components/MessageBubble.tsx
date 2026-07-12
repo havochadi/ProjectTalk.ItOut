@@ -105,14 +105,19 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           {!isUser && message.featureSuggestion && (
             <Link
               to={message.featureSuggestion.path}
-              className="mt-3 flex items-center gap-3 rounded-xl border border-wellness-sage-200 bg-wellness-sage-50 px-3 py-2.5 text-wellness-sage-900 transition hover:border-wellness-sage-300 hover:bg-wellness-sage-100"
+              className={`mt-3 flex min-h-14 items-center gap-3 rounded-xl border px-3 py-2.5 transition ${
+                message.featureSuggestion.id === 'tasks'
+                  ? 'border-wellness-sage-400/40 bg-wellness-sage-500/15 text-text hover:bg-wellness-sage-500/25'
+                  : 'border-wellness-sky-400/40 bg-wellness-sky-500/15 text-text hover:bg-wellness-sky-500/25'
+              }`}
             >
               {message.featureSuggestion.id === 'tasks'
                 ? <CheckSquare className="h-4 w-4 shrink-0" />
                 : <Timer className="h-4 w-4 shrink-0" />}
               <span className="min-w-0 flex-1">
+                <span className="block text-[0.6rem] font-bold uppercase tracking-wide text-muted">Recommended next step</span>
                 <span className="block text-xs font-bold">{message.featureSuggestion.label}</span>
-                <span className="block text-[0.68rem] leading-snug text-wellness-sage-700">
+                <span className="block text-[0.68rem] leading-snug text-muted">
                   {message.featureSuggestion.description}
                 </span>
               </span>

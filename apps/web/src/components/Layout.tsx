@@ -21,7 +21,7 @@ export const Layout: React.FC = () => {
         </motion.div>
       </main>
       <footer className="border-t border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-xs text-muted md:flex-row md:items-center md:justify-between md:px-8">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 pb-20 pt-5 text-xs text-muted sm:py-5 md:flex-row md:items-center md:justify-between md:px-8">
           <div className="flex items-start gap-2 font-medium leading-relaxed text-wellness-sage-500 sm:items-center">
             <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 sm:mt-0" />
             <span>Crisis Support: Emergency <strong>999</strong> · Samaritans of Singapore <strong>1767</strong> · SOS CareText <strong>9151 1767</strong></span>

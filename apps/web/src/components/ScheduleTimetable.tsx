@@ -17,7 +17,7 @@ type BreakBlock = {
 
 const START_HOUR = 7;
 const END_HOUR = 24;
-const HOUR_HEIGHT = 48;
+const HOUR_HEIGHT = 60;
 const TIMELINE_HEIGHT = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
 const SCHOOL_START = 8 * 60;
 const SCHOOL_END = 15 * 60;
@@ -42,12 +42,12 @@ const clockLabel = (minutes: number, includeMinutes = true) => {
   return `${hours % 12 || 12}${minuteLabel} ${hours >= 12 ? 'PM' : 'AM'}`;
 };
 const timeLabel = (iso: string) => clockLabel(minutesOfDay(iso));
-const positionStyle = (startMinutes: number, endMinutes: number, minimumHeight = 24) => {
+const positionStyle = (startMinutes: number, endMinutes: number) => {
   const visibleStart = Math.max(startMinutes, START_HOUR * 60);
   const visibleEnd = Math.min(endMinutes, END_HOUR * 60);
   const top = ((visibleStart - START_HOUR * 60) / 60) * HOUR_HEIGHT;
   const naturalHeight = ((visibleEnd - visibleStart) / 60) * HOUR_HEIGHT;
-  return { top, height: Math.max(minimumHeight, naturalHeight) };
+  return { top, height: Math.max(1, naturalHeight) };
 };
 
 const getBreaks = (blocks: ScheduleBlock[]): BreakBlock[] => {
@@ -100,7 +100,7 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
               {weekIndex === 0 ? 'This plan' : `Week ${weekIndex + 1}`} · {days[0].toLocaleDateString('en-SG', { day: 'numeric', month: 'short', timeZone: 'UTC' })}–{days[6].toLocaleDateString('en-SG', { day: 'numeric', month: 'short', timeZone: 'UTC' })}
             </div>
 
-            <div className="max-h-[68vh] overflow-auto">
+            <div className="overflow-x-auto">
               <div className="grid min-w-[1050px] grid-cols-[72px_repeat(7,minmax(135px,1fr))]">
                 <div className="sticky left-0 top-0 z-50 flex items-center justify-center border-b border-r border-[#3A3453] bg-[#211D32] px-2 py-2 text-[0.65rem] font-bold uppercase tracking-wide text-white/45">
                   Time
@@ -142,7 +142,7 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
                       }}
                     >
                       {isSchoolDay && (
-                        <div className="absolute left-1.5 right-1.5 z-10 overflow-hidden rounded-lg border border-indigo-400/25 bg-indigo-500/15 p-2 text-indigo-100" style={positionStyle(SCHOOL_START, SCHOOL_END, 32)}>
+                        <div className="absolute left-1.5 right-1.5 z-10 overflow-hidden rounded-lg border border-indigo-400/25 bg-indigo-500/15 p-2 text-indigo-100" style={positionStyle(SCHOOL_START, SCHOOL_END)}>
                           <div className="flex items-center gap-1 text-[0.6rem] font-bold uppercase tracking-wide text-indigo-200">
                             <GraduationCap className="h-3 w-3" /> School
                           </div>
@@ -151,7 +151,7 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
                       )}
 
                       {isSchoolDay && (
-                        <div className="absolute left-3 right-3 z-20 rounded-md border border-amber-300/25 bg-[#4A351D] px-1.5 py-1 text-[0.56rem] font-semibold text-amber-100" style={positionStyle(12 * 60 + 30, 13 * 60, 22)}>
+                        <div className="absolute left-3 right-3 z-20 flex items-center rounded-md border border-amber-300/25 bg-[#4A351D] px-1.5 text-[0.56rem] font-semibold text-amber-100" style={positionStyle(12 * 60 + 30, 13 * 60)}>
                           <span className="flex items-center gap-1"><Coffee className="h-3 w-3" /> Lunch break</span>
                         </div>
                       )}
@@ -159,10 +159,10 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
                       {breaks.map((breakBlock) => (
                         <div
                           key={`${dateKey(day)}-break-${breakBlock.startMinutes}`}
-                          className="absolute left-2 right-2 z-20 flex items-center justify-center rounded-md border border-amber-300/30 bg-[#4A351D] px-1 text-[0.55rem] font-semibold text-amber-100"
-                          style={positionStyle(breakBlock.startMinutes, breakBlock.endMinutes, 18)}
+                          className="absolute left-2 right-2 z-20 flex items-center justify-center overflow-hidden rounded-sm border border-amber-300/30 bg-[#4A351D] px-1 text-[0.5rem] font-semibold leading-none text-amber-100"
+                          style={positionStyle(breakBlock.startMinutes, breakBlock.endMinutes)}
                         >
-                          <Coffee className="mr-1 h-3 w-3" /> {breakBlock.duration} min break
+                          <Coffee className="mr-1 h-2.5 w-2.5 shrink-0" /> {breakBlock.duration} min break
                         </div>
                       ))}
 
@@ -171,23 +171,34 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
                         const Icon = isRevision ? BookOpen : ClipboardCheck;
                         const startMinutes = minutesOfDay(block.start);
                         const endMinutes = minutesOfDay(block.end);
+                        const duration = Math.max(1, endMinutes - startMinutes);
+                        const isCompact = duration < 35;
                         return (
                           <div
                             key={`${block.start}-${block.title}`}
-                            className={`absolute left-1.5 right-1.5 z-30 overflow-hidden rounded-lg border p-2 shadow-lg ${isRevision ? 'border-wellness-sky-500/35 bg-[#102333]' : 'border-wellness-sage-500/35 bg-[#1B1747]'}`}
+                            className={`absolute left-1.5 right-1.5 z-30 overflow-hidden rounded-md border shadow-lg ${isCompact ? 'flex items-center gap-1 px-1.5 py-0.5' : 'p-1.5'} ${isRevision ? 'border-wellness-sky-500/35 bg-[#102333]' : 'border-wellness-sage-500/35 bg-[#1B1747]'}`}
                             style={positionStyle(startMinutes, endMinutes)}
                             title={`${block.title} · ${timeLabel(block.start)}–${timeLabel(block.end)}`}
                           >
-                            <div className={`flex items-center gap-1 text-[0.56rem] font-bold uppercase ${isRevision ? 'text-wellness-sky-300' : 'text-wellness-sage-300'}`}>
-                              <Icon className="h-3 w-3" /> {isRevision ? 'Revision' : 'Homework'}
-                            </div>
-                            <p className="mt-0.5 truncate text-[0.65rem] font-semibold text-white">{block.title}</p>
-                            <p className="mt-0.5 text-[0.56rem] text-white/55">{timeLabel(block.start)}–{timeLabel(block.end)}</p>
+                            {isCompact ? (
+                              <>
+                                <Icon className={`h-2.5 w-2.5 shrink-0 ${isRevision ? 'text-wellness-sky-300' : 'text-wellness-sage-300'}`} />
+                                <p className="min-w-0 truncate text-[0.52rem] font-semibold leading-none text-white">{block.title}</p>
+                              </>
+                            ) : (
+                              <>
+                                <div className={`flex items-center gap-1 text-[0.54rem] font-bold uppercase ${isRevision ? 'text-wellness-sky-300' : 'text-wellness-sage-300'}`}>
+                                  <Icon className="h-3 w-3" /> {isRevision ? 'Revision' : 'Homework'}
+                                </div>
+                                <p className="mt-0.5 truncate text-[0.62rem] font-semibold leading-tight text-white">{block.title}</p>
+                                {duration >= 45 && <p className="mt-0.5 text-[0.52rem] leading-none text-white/55">{timeLabel(block.start)}–{timeLabel(block.end)}</p>}
+                              </>
+                            )}
                           </div>
                         );
                       })}
 
-                      <div className="absolute left-1.5 right-1.5 z-10 overflow-hidden rounded-lg border border-violet-400/25 bg-violet-500/15 p-2 text-violet-100" style={positionStyle(SLEEP_START, END_HOUR * 60, 42)}>
+                      <div className="absolute left-1.5 right-1.5 z-10 overflow-hidden rounded-lg border border-violet-400/25 bg-violet-500/15 p-2 text-violet-100" style={positionStyle(SLEEP_START, END_HOUR * 60)}>
                         <div className="flex items-center gap-1 text-[0.58rem] font-bold uppercase tracking-wide text-violet-200">
                           <Moon className="h-3 w-3" /> Recommended sleep
                         </div>

@@ -94,7 +94,7 @@ Set the AI secret and deploy all functions:
 
 ```powershell
 npx supabase@latest secrets set GEMINI_API_KEY=YOUR_GEMINI_API_KEY
-npx supabase@latest secrets set GEMINI_MODEL=gemini-3.5-flash
+npx supabase@latest secrets set GEMINI_MODEL=gemini-3.1-flash-lite
 npx supabase@latest functions deploy assistant
 npx supabase@latest functions deploy voice
 npx supabase@latest functions deploy account

@@ -175,34 +175,88 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
   };
 }
 
+class GeminiRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+const wait = (milliseconds: number) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
 async function generateGemini(prompt: string) {
   const apiKey = Deno.env.get('GEMINI_API_KEY');
   if (!apiKey) throw new Error('GEMINI_API_KEY is not configured in Supabase secrets');
-  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-3.5-flash';
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.65, maxOutputTokens: 2048 },
-      }),
-      signal: AbortSignal.timeout(20_000),
+  const configuredModel = Deno.env.get('GEMINI_MODEL') || 'gemini-3.1-flash-lite';
+  const models = [...new Set([configuredModel, 'gemini-3.5-flash'])];
+  let lastError: unknown = new Error('Gemini request failed');
+
+  for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+    const model = models[modelIndex];
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+          },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.65, maxOutputTokens: 2048 },
+          }),
+          signal: AbortSignal.timeout(modelIndex === 0 ? 12_000 : 18_000),
+        }
+      );
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new GeminiRequestError(
+          payload?.error?.message || `Gemini request failed (${response.status})`,
+          response.status
+        );
+      }
+      const candidate = payload?.candidates?.[0];
+      if (candidate?.finishReason === 'MAX_TOKENS') {
+        throw new GeminiRequestError('Gemini response was truncated', 500);
+      }
+      const text = candidate?.content?.parts
+        ?.map((part: { text?: string }) => part.text || '')
+        .join('')
+        .trim();
+      if (!text) throw new GeminiRequestError('Gemini returned an empty response', 503);
+      return text;
+    } catch (error) {
+      lastError = error;
+      const status = error instanceof GeminiRequestError ? error.status : 503;
+      const canTryFallback = modelIndex < models.length - 1 &&
+        (status === 404 || status === 408 || status === 429 || status >= 500);
+      if (!canTryFallback) throw error;
+      await wait(500);
     }
-  );
-  const payload = await response.json();
-  if (!response.ok) throw new Error(payload?.error?.message || 'Gemini request failed');
-  const candidate = payload?.candidates?.[0];
-  if (candidate?.finishReason === 'MAX_TOKENS') {
-    throw new Error('Gemini response was truncated');
   }
-  const text = candidate?.content?.parts
-    ?.map((part: { text?: string }) => part.text || '')
-    .join('')
-    .trim();
-  if (!text) throw new Error('Gemini returned an empty response');
-  return text;
+
+  throw lastError;
+}
+
+function buildSafeFallback(text: string, severity: number) {
+  const normalized = text.toLowerCase();
+  if (severity >= 2) {
+    return `That sounds like a lot to carry. Take one slow breath, then consider telling a trusted adult or school counselor what is happening. You don't have to handle it alone.`;
+  }
+  if (/\b(stomach|tummy|pain|ache|sick|nausea|vomit|fever|dizzy|constipat|bloated|gas|fart)\b/.test(normalized)) {
+    return `That sounds uncomfortable. Try a gentle walk, changing position, and sipping some water. If the pain is severe, keeps worsening, or comes with vomiting or fever, tell a trusted adult and seek medical advice.`;
+  }
+  if (/\b(homework|assignment|revision|exam|study|deadline|schedule)\b/.test(normalized)) {
+    return `Let's make it smaller: choose the most urgent school task and work on only its first step for ten minutes. You can also use the Smart Scheduler to turn the rest into a manageable plan.`;
+  }
+  if (/\b(stressed|overwhelmed|burnout|burnt out|exhausted|anxious|panic|can't focus|cannot focus)\b/.test(normalized)) {
+    return `Pause for one slow breath and release your shoulders. Do only the smallest necessary next step, or open Focus & Breathe for a guided reset before deciding what comes next.`;
+  }
+  return `I'm having a temporary connection problem, so my replies may be limited right now. Your message was saved—please try again shortly, or tell me the one thing you most want help with.`;
 }
 
 function extractJson(text: string) {
@@ -368,9 +422,7 @@ Deno.serve(async (request) => {
       );
     } catch (aiError) {
       console.error('Gemini response failed; using safe fallback.', aiError);
-      responseText = analysis.severity >= 2
-        ? `That sounds like a lot to carry. Take one slow breath, then consider telling a trusted adult or school counselor what is happening. You don't have to handle it alone.`
-        : `I'm having trouble replying fully right now, but your message was saved. For now, pause for one slow breath and choose the smallest next step you can manage.`;
+      responseText = buildSafeFallback(text, analysis.severity);
     }
     const safeResponse =
       analysis.severity >= 3 ? `${crisisResources}\n\n${responseText}` : responseText;

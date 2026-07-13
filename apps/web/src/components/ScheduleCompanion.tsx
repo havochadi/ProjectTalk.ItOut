@@ -1,17 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { BellRing, CalendarDays, Clock, Loader2, Trash2, X } from 'lucide-react';
+import { BellRing, CalendarDays, Clock, Loader2, Trash2, Undo2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { taskAPI } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { ScheduleTimetable } from './ScheduleTimetable';
+import type { ScheduleBlock } from './ScheduleTimetable';
+import { ScheduleBlockEditor } from './ScheduleBlockEditor';
 
 export const ScheduleCompanion: React.FC = () => {
   const { user } = useAuth();
   const [schedule, setSchedule] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [canUndo, setCanUndo] = useState(taskAPI.hasScheduleUndo());
+  const [editingBlock, setEditingBlock] = useState<ScheduleBlock | null>(null);
   const [now, setNow] = useState(Date.now());
   const [dismissedId, setDismissedId] = useState<string | null>(null);
 
@@ -23,6 +28,7 @@ export const ScheduleCompanion: React.FC = () => {
     } catch {
       setSchedule([]);
     }
+    setCanUndo(taskAPI.hasScheduleUndo());
   };
 
   useEffect(() => {
@@ -78,12 +84,27 @@ export const ScheduleCompanion: React.FC = () => {
     try {
       await taskAPI.clearSchedule();
       setSchedule([]);
+      setCanUndo(taskAPI.hasScheduleUndo());
       setDismissedId(null);
       toast.success('Timetable deleted. Your tasks are still available.');
     } catch (error: any) {
       toast.error(error?.response?.data?.error || 'Could not delete the timetable.');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const undoDelete = async () => {
+    setIsRestoring(true);
+    try {
+      const response = await taskAPI.restoreDeletedSchedule();
+      setSchedule(response.data.schedule || []);
+      setCanUndo(false);
+      toast.success('Your last timetable deletion was undone.');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || error?.message || 'Could not undo the deletion.');
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -145,6 +166,18 @@ export const ScheduleCompanion: React.FC = () => {
                   <p className="mt-1 text-sm text-white/55">Homework, revision, school, breaks, and recommended sleep in one weekly view.</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {canUndo && schedule.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={undoDelete}
+                      disabled={isRestoring}
+                      className="flex min-h-11 items-center gap-1.5 rounded-xl border border-wellness-sage-400/35 bg-wellness-sage-500/10 px-3 text-xs font-bold text-white hover:bg-wellness-sage-500/20 disabled:opacity-60"
+                      aria-label="Undo last timetable deletion"
+                    >
+                      {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}
+                      <span className="hidden sm:inline">{isRestoring ? 'Restoring…' : 'Undo'}</span>
+                    </button>
+                  )}
                   {schedule.length > 0 && (
                     <button
                       type="button"
@@ -164,21 +197,36 @@ export const ScheduleCompanion: React.FC = () => {
               </header>
 
               {schedule.length ? (
-                <ScheduleTimetable blocks={schedule} />
+                <ScheduleTimetable blocks={schedule} onEditBlock={setEditingBlock} />
               ) : (
                 <div className="rounded-2xl border border-dashed border-[#3A3453] px-5 py-12 text-center">
                   <Clock className="mx-auto h-9 w-9 text-white/25" />
                   <p className="mt-3 text-sm font-semibold">No saved timetable yet</p>
-                  <p className="mt-1 text-xs text-white/50">Build one from your open homework and revision items.</p>
-                  <Link to="/app/tasks?scheduler=open" onClick={() => setIsOpen(false)} className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-wellness-sage-600 px-4 text-sm font-bold text-white hover:bg-wellness-sage-700">
-                    Open Smart Scheduler
-                  </Link>
+                  <p className="mt-1 text-xs text-white/50">{canUndo ? 'Your tasks are safe. Restore the timetable if deleting it was a mistake.' : 'Build one from your open homework and revision items.'}</p>
+                  {canUndo ? (
+                    <button type="button" onClick={undoDelete} disabled={isRestoring} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-wellness-sage-600 px-4 text-sm font-bold text-white hover:bg-wellness-sage-700 disabled:opacity-60">
+                      {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}
+                      {isRestoring ? 'Restoring…' : 'Undo timetable deletion'}
+                    </button>
+                  ) : (
+                    <Link to="/app/tasks?scheduler=open" onClick={() => setIsOpen(false)} className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-wellness-sage-600 px-4 text-sm font-bold text-white hover:bg-wellness-sage-700">
+                      Open Smart Scheduler
+                    </Link>
+                  )}
                 </div>
               )}
             </motion.section>
           </motion.div>
         )}
       </AnimatePresence>
+      {editingBlock?.id && (
+        <ScheduleBlockEditor
+          key={editingBlock.id}
+          block={editingBlock}
+          onClose={() => setEditingBlock(null)}
+          onChanged={loadSchedule}
+        />
+      )}
     </>
   );
 };

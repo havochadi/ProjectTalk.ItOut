@@ -13,6 +13,47 @@ function announceScheduleChange() {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('talkitout:schedule-changed'));
 }
 
+type ScheduleBackupBlock = {
+  id?: string;
+  taskId: string;
+  start: string;
+  end: string;
+  sequence?: number;
+  tip?: string | null;
+  scheduleStatus?: 'todo' | 'doing' | 'done';
+};
+
+type DeletedScheduleBackup = {
+  userId: string;
+  kind: 'timetable' | 'session';
+  blocks: ScheduleBackupBlock[];
+};
+
+const SCHEDULE_UNDO_KEY = 'talkitout:schedule-undo';
+
+const readScheduleBackup = (): DeletedScheduleBackup | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = window.sessionStorage.getItem(SCHEDULE_UNDO_KEY);
+    return stored ? JSON.parse(stored) as DeletedScheduleBackup : null;
+  } catch {
+    return null;
+  }
+};
+
+let deletedScheduleBackup: DeletedScheduleBackup | null = readScheduleBackup();
+
+const setScheduleBackup = (backup: DeletedScheduleBackup | null) => {
+  deletedScheduleBackup = backup;
+  if (typeof window === 'undefined') return;
+  try {
+    if (backup) window.sessionStorage.setItem(SCHEDULE_UNDO_KEY, JSON.stringify(backup));
+    else window.sessionStorage.removeItem(SCHEDULE_UNDO_KEY);
+  } catch {
+    // Undo still works in memory when browser storage is unavailable.
+  }
+};
+
 function unwrap<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
@@ -383,19 +424,99 @@ export const taskAPI = {
     }));
     const { data, error } = await supabase.rpc('replace_schedule_blocks', { p_blocks: payload });
     if (error) fail(error);
+    setScheduleBackup(null);
     announceScheduleChange();
     return { data: { schedule: data || [] } };
   },
 
   async clearSchedule(): ApiResponse {
     const userId = await currentUserId();
+    const snapshot = (await this.getSavedSchedule()).data.schedule || [];
     const { error } = await supabase
       .from('schedule_blocks')
       .delete()
       .eq('user_id', userId);
     if (error) fail(error);
+    setScheduleBackup(snapshot.length
+      ? { userId, kind: 'timetable', blocks: snapshot }
+      : null);
     announceScheduleChange();
-    return { data: { message: 'Timetable deleted' } };
+    return { data: { message: 'Timetable deleted', deletedCount: snapshot.length } };
+  },
+
+  hasScheduleUndo(): boolean {
+    return Boolean(deletedScheduleBackup?.blocks.length);
+  },
+
+  async restoreDeletedSchedule(): ApiResponse {
+    const userId = await currentUserId();
+    const backup = deletedScheduleBackup;
+    if (!backup?.blocks.length || backup.userId !== userId) {
+      setScheduleBackup(null);
+      throw new Error('There is no timetable change to undo.');
+    }
+
+    if (backup.kind === 'timetable') {
+      const { count, error: countError } = await supabase
+        .from('schedule_blocks')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId);
+      if (countError) fail(countError);
+      if (count) throw new Error('Your timetable has changed since it was deleted.');
+    }
+
+    const rows = backup.blocks.map((block) => ({
+      user_id: userId,
+      task_id: block.taskId,
+      start_at: block.start,
+      end_at: block.end,
+      sequence: block.sequence || 1,
+      tip: block.tip || null,
+      status: block.scheduleStatus || 'todo',
+    }));
+    const { error } = await supabase.from('schedule_blocks').insert(rows);
+    if (error) fail(error);
+    setScheduleBackup(null);
+    announceScheduleChange();
+    return this.getSavedSchedule();
+  },
+
+  async updateScheduleBlock(id: string, input: { start: string; end: string; status?: string }): ApiResponse {
+    const userId = await currentUserId();
+    if (input.status && !['todo', 'doing', 'done'].includes(input.status)) {
+      throw new Error('Invalid schedule status');
+    }
+    const { data, error } = await supabase
+      .from('schedule_blocks')
+      .update({
+        start_at: input.start,
+        end_at: input.end,
+        ...(input.status ? { status: input.status } : {}),
+      })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    if (error) fail(error);
+    announceScheduleChange();
+    return { data };
+  },
+
+  async deleteScheduleBlock(id: string): ApiResponse {
+    const userId = await currentUserId();
+    const schedule = (await this.getSavedSchedule()).data.schedule || [];
+    const snapshot = schedule.find((block: ScheduleBackupBlock) => block.id === id);
+    const { error } = await supabase
+      .from('schedule_blocks')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+    if (error) fail(error);
+    setScheduleBackup(snapshot
+      ? { userId, kind: 'session', blocks: [snapshot] }
+      : null);
+    announceScheduleChange();
+    return { data: { message: 'Timetable session deleted' } };
   },
 
   async getAll(params: any = {}): ApiResponse {

@@ -44,7 +44,12 @@ export const TasksPage: React.FC = () => {
   const [studySuggestions, setStudySuggestions] = useState<StudySuggestion[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
-  useEffect(() => { loadTasks(); }, []);
+  useEffect(() => {
+    void loadTasks();
+    const refresh = () => void loadTasks();
+    window.addEventListener('talkitout:schedule-changed', refresh);
+    return () => window.removeEventListener('talkitout:schedule-changed', refresh);
+  }, []);
 
   const loadTasks = async () => {
     const [taskResult, scheduleResult] = await Promise.allSettled([

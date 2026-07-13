@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarClock, ChevronDown, ChevronUp, Lightbulb, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { CalendarClock, ChevronDown, ChevronUp, Lightbulb, Loader2, Plus, Sparkles, Trash2, Undo2 } from 'lucide-react';
 import { taskAPI } from '../api/client';
 import toast from 'react-hot-toast';
 import { ScheduleTimetable } from './ScheduleTimetable';
+import type { ScheduleBlock } from './ScheduleTimetable';
+import { ScheduleBlockEditor } from './ScheduleBlockEditor';
 import { useSearchParams } from 'react-router-dom';
 
 type SchedulerInput = {
@@ -14,21 +16,6 @@ type SchedulerInput = {
   deadline: string;
   estimatedMinutes: number;
   importance: number;
-};
-
-type ScheduleBlock = {
-  id?: string;
-  taskId: string;
-  title: string;
-  subject?: string | null;
-  workType?: 'homework' | 'revision';
-  start: string;
-  end: string;
-  priority: 'low' | 'med' | 'high';
-  rank: number;
-  sequence: number;
-  tip: string;
-  scheduleStatus?: 'todo' | 'doing' | 'done';
 };
 
 type ScheduleResult = {
@@ -69,17 +56,31 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [canUndo, setCanUndo] = useState(taskAPI.hasScheduleUndo());
+  const [editingBlock, setEditingBlock] = useState<ScheduleBlock | null>(null);
   const [savedSchedule, setSavedSchedule] = useState<ScheduleBlock[]>([]);
   const scheduledTaskIds = new Set(savedSchedule
     .filter((block) => block.scheduleStatus !== 'done' && new Date(block.end).getTime() >= Date.now())
     .map((block) => block.taskId));
   const unscheduledCount = tasks.filter((task) => task.status !== 'done' && !scheduledTaskIds.has(task._id)).length;
 
+  const loadSavedSchedule = useCallback(async () => {
+    try {
+      const response = await taskAPI.getSavedSchedule();
+      setSavedSchedule(response.data.schedule || []);
+    } catch {
+      setSavedSchedule([]);
+    }
+    setCanUndo(taskAPI.hasScheduleUndo());
+  }, []);
+
   useEffect(() => {
-    void taskAPI.getSavedSchedule()
-      .then((response) => setSavedSchedule(response.data.schedule || []))
-      .catch(() => setSavedSchedule([]));
-  }, [tasks]);
+    void loadSavedSchedule();
+    const refresh = () => void loadSavedSchedule();
+    window.addEventListener('talkitout:schedule-changed', refresh);
+    return () => window.removeEventListener('talkitout:schedule-changed', refresh);
+  }, [tasks, loadSavedSchedule]);
 
   const updateItem = (id: string, key: keyof SchedulerInput, value: string | number) => {
     setItems((current) => current.map((item) => {
@@ -147,7 +148,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
     setIsCreating(true);
     try {
       await taskAPI.saveSchedule(result.schedule);
-      setSavedSchedule(result.schedule);
+      await loadSavedSchedule();
       onChanged();
       toast.success('Your weekly timetable has been saved.');
       setResult(null);
@@ -168,6 +169,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
     try {
       await taskAPI.clearSchedule();
       setSavedSchedule([]);
+      setCanUndo(taskAPI.hasScheduleUndo());
       setResult(null);
       onChanged();
       toast.success('Timetable deleted. Your tasks are still available.');
@@ -178,7 +180,23 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
     }
   };
 
+  const undoDelete = async () => {
+    setIsRestoring(true);
+    try {
+      const response = await taskAPI.restoreDeletedSchedule();
+      setSavedSchedule(response.data.schedule || []);
+      setCanUndo(false);
+      onChanged();
+      toast.success('Your last timetable deletion was undone.');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || error?.message || 'Could not undo the deletion.');
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   return (
+    <>
     <section className="overflow-hidden rounded-2xl border border-[#3A3453] bg-[#191624] shadow-card">
       <button
         type="button"
@@ -331,6 +349,19 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
                 {isGenerating ? 'Building your plan…' : savedSchedule.length ? 'Update my timetable' : 'Build my timetable'}
               </button>
 
+              {!result && savedSchedule.length === 0 && canUndo && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-wellness-sage-400/30 bg-wellness-sage-500/10 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-bold text-white">Timetable deleted</p>
+                    <p className="text-xs text-white/55">Your tasks are safe. Restore the most recent deletion if it was a mistake.</p>
+                  </div>
+                  <button type="button" onClick={undoDelete} disabled={isRestoring} className="flex min-h-10 items-center gap-2 rounded-xl border border-wellness-sage-400/40 bg-[#211D32] px-3 text-xs font-bold text-white hover:bg-[#2A2540] disabled:opacity-60">
+                    {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}
+                    {isRestoring ? 'Restoring…' : 'Undo delete'}
+                  </button>
+                </div>
+              )}
+
               {!result && savedSchedule.length > 0 && (
                 <div className="space-y-3 border-t border-[#3A3453] pt-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -340,6 +371,12 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <p className="text-xs text-white/45">Deleting the timetable keeps your tasks.</p>
+                      {canUndo && (
+                        <button type="button" onClick={undoDelete} disabled={isRestoring} className="flex min-h-10 items-center gap-1.5 rounded-xl border border-wellness-sage-400/35 bg-wellness-sage-500/10 px-3 text-xs font-bold text-white hover:bg-wellness-sage-500/20 disabled:opacity-60">
+                          {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}
+                          {isRestoring ? 'Restoring…' : 'Undo last delete'}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={deleteTimetable}
@@ -356,7 +393,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
                       {unscheduledCount} open To-Do item{unscheduledCount === 1 ? '' : 's'} {unscheduledCount === 1 ? 'is' : 'are'} not in this timetable yet. Select <strong>Update my timetable</strong> to include {unscheduledCount === 1 ? 'it' : 'them'}.
                     </div>
                   )}
-                  <ScheduleTimetable blocks={savedSchedule} />
+                  <ScheduleTimetable blocks={savedSchedule} onEditBlock={setEditingBlock} />
                 </div>
               )}
 
@@ -417,5 +454,14 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
         )}
       </AnimatePresence>
     </section>
+    {editingBlock?.id && (
+      <ScheduleBlockEditor
+        key={editingBlock.id}
+        block={editingBlock}
+        onClose={() => setEditingBlock(null)}
+        onChanged={loadSavedSchedule}
+      />
+    )}
+    </>
   );
 };

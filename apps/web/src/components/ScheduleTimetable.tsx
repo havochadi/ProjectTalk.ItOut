@@ -1,12 +1,17 @@
 import React, { useMemo } from 'react';
 import { BookOpen, ClipboardCheck, Coffee, GraduationCap, Moon } from 'lucide-react';
 
-type ScheduleBlock = {
+export type ScheduleBlock = {
   id?: string;
+  taskId: string;
   title: string;
+  subject?: string | null;
   start: string;
   end: string;
   workType?: 'homework' | 'revision';
+  priority?: 'low' | 'med' | 'high';
+  rank?: number;
+  tip?: string;
   sequence?: number;
   scheduleStatus?: 'todo' | 'doing' | 'done';
 };
@@ -19,6 +24,7 @@ type TimetableEvent = {
   endMinutes: number;
   sequence?: number;
   status?: 'todo' | 'doing' | 'done';
+  block?: ScheduleBlock;
 };
 
 const START_MINUTES = 7 * 60;
@@ -100,7 +106,7 @@ const EventIcon = ({ type, compact = false }: { type: TimetableEvent['type']; co
   return <Coffee className={className} />;
 };
 
-const TimetableCard = ({ event, layer = 20 }: { event: TimetableEvent; layer?: number }) => {
+const TimetableCard = ({ event, layer = 20, onEdit }: { event: TimetableEvent; layer?: number; onEdit?: () => void }) => {
   const duration = eventDuration(event);
   const isTiny = duration <= 20;
   const isCompact = duration <= 35;
@@ -120,44 +126,56 @@ const TimetableCard = ({ event, layer = 20 }: { event: TimetableEvent; layer?: n
     );
   }
 
-  return (
-    <div
-      className={`absolute left-1.5 right-1.5 overflow-hidden rounded-md border shadow-md ${eventStyles[event.type]} ${event.status === 'done' ? 'opacity-55' : ''}`}
-      style={{ ...positionStyle(event), zIndex: layer }}
-      title={`${event.title} · ${timeRange}${event.sequence && event.type === 'revision' ? ` · Session ${event.sequence}` : ''}`}
-    >
-      {isTiny ? (
-        <div className="flex h-full min-w-0 items-center gap-1 px-1.5 text-[0.5rem] font-semibold leading-none">
-          <EventIcon type={event.type} compact />
-          <span className="min-w-0 flex-1 truncate">{event.title}</span>
-          <span className="shrink-0 opacity-60">{duration}m</span>
-        </div>
-      ) : isCompact ? (
-        <div className="flex h-full min-w-0 flex-col justify-center px-1.5 py-0.5">
-          <div className="flex items-center gap-1 text-[0.48rem] font-bold uppercase leading-none opacity-75">
-            <EventIcon type={event.type} compact /> {event.type === 'break' ? 'Break' : event.type}
-          </div>
-          <p className="mt-1 truncate text-[0.55rem] font-semibold leading-none text-white">{event.title}</p>
-        </div>
-      ) : (
-        <div className="p-2">
-          <div className="flex items-center gap-1.5 text-[0.56rem] font-bold uppercase tracking-wide opacity-80">
-            <EventIcon type={event.type} />
-            <span>{event.type === 'break' ? 'Break' : event.type}</span>
-            {event.status === 'done' && <span className="ml-auto rounded bg-white/10 px-1 py-0.5 text-[0.48rem]">Done</span>}
-            {event.status === 'doing' && <span className="ml-auto rounded bg-white/10 px-1 py-0.5 text-[0.48rem]">Doing</span>}
-          </div>
-          <p className="mt-1 break-words text-[0.67rem] font-semibold leading-snug text-white">{event.title}</p>
-          <p className="mt-1 text-[0.55rem] leading-none opacity-65">
-            {timeRange}{event.sequence && event.type === 'revision' ? ` · Session ${event.sequence}` : ''}
-          </p>
-        </div>
-      )}
+  const content = isTiny ? (
+    <div className="flex h-full min-w-0 items-center gap-1 px-1.5 text-[0.5rem] font-semibold leading-none">
+      <EventIcon type={event.type} compact />
+      <span className="min-w-0 flex-1 truncate">{event.title}</span>
+      <span className="shrink-0 opacity-60">{duration}m</span>
+    </div>
+  ) : isCompact ? (
+    <div className="flex h-full min-w-0 flex-col justify-center px-1.5 py-0.5">
+      <div className="flex items-center gap-1 text-[0.48rem] font-bold uppercase leading-none opacity-75">
+        <EventIcon type={event.type} compact /> {event.type === 'break' ? 'Break' : event.type}
+      </div>
+      <p className="mt-1 truncate text-[0.55rem] font-semibold leading-none text-white">{event.title}</p>
+    </div>
+  ) : (
+    <div className="p-2">
+      <div className="flex items-center gap-1.5 text-[0.56rem] font-bold uppercase tracking-wide opacity-80">
+        <EventIcon type={event.type} />
+        <span>{event.type === 'break' ? 'Break' : event.type}</span>
+        {event.status === 'done' && <span className="ml-auto rounded bg-white/10 px-1 py-0.5 text-[0.48rem]">Done</span>}
+        {event.status === 'doing' && <span className="ml-auto rounded bg-white/10 px-1 py-0.5 text-[0.48rem]">Doing</span>}
+      </div>
+      <p className="mt-1 break-words text-[0.67rem] font-semibold leading-snug text-white">{event.title}</p>
+      <p className="mt-1 text-[0.55rem] leading-none opacity-65">
+        {timeRange}{event.sequence && event.type === 'revision' ? ` · Session ${event.sequence}` : ''}
+      </p>
     </div>
   );
+  const className = `absolute left-1.5 right-1.5 overflow-hidden rounded-md border text-left shadow-md ${eventStyles[event.type]} ${event.status === 'done' ? 'opacity-55' : ''}`;
+  const title = `${event.title} · ${timeRange}${event.sequence && event.type === 'revision' ? ` · Session ${event.sequence}` : ''}${onEdit ? ' · Click to edit' : ''}`;
+  const style = { ...positionStyle(event), zIndex: layer };
+
+  if (onEdit) {
+    return (
+      <button
+        type="button"
+        className={`${className} cursor-pointer transition hover:brightness-125 focus:outline-none focus:ring-2 focus:ring-wellness-sage-300 focus:ring-inset`}
+        style={style}
+        title={title}
+        aria-label={`Edit ${event.title}, ${timeRange}`}
+        onClick={onEdit}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={className} style={style} title={title}>{content}</div>;
 };
 
-export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ blocks }) => {
+export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[]; onEditBlock?: (block: ScheduleBlock) => void }> = ({ blocks, onEditBlock }) => {
   const weeks = useMemo(() => {
     const grouped = new Map<string, Map<string, ScheduleBlock[]>>();
     blocks.forEach((block) => {
@@ -180,7 +198,7 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
         <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#B48324]" /> Break</span>
         <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#7766A8]" /> Sleep</span>
       </div>
-      <p className="text-xs text-white/45">Times now follow the vertical scale. Scroll down for later sessions<span className="sm:hidden"> and sideways for the full week</span>.</p>
+      <p className="text-xs text-white/45">Times follow the vertical scale. {onEditBlock ? 'Select a homework or revision block to edit it. ' : ''}Scroll down for later sessions<span className="sm:hidden"> and sideways for the full week</span>.</p>
 
       {weeks.map(([weekKey, scheduledDays], weekIndex) => {
         const monday = fromKey(weekKey);
@@ -238,6 +256,7 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
                       endMinutes: minutesOfDay(block.end),
                       sequence: block.sequence,
                       status: block.scheduleStatus,
+                      block,
                     }));
 
                     return (
@@ -252,7 +271,14 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
                         {isSchoolDay && <TimetableCard event={{ id: `${dayKey}-school`, type: 'school', title: 'School day', startMinutes: SCHOOL_START, endMinutes: SCHOOL_END }} layer={10} />}
                         {isSchoolDay && <TimetableCard event={{ id: `${dayKey}-lunch`, type: 'break', title: 'Lunch break', startMinutes: LUNCH_START, endMinutes: LUNCH_END }} layer={30} />}
                         {getBreakEvents(dayBlocks, dayKey).map((event) => <TimetableCard key={event.id} event={event} layer={25} />)}
-                        {studyEvents.map((event) => <TimetableCard key={event.id} event={event} layer={35} />)}
+                        {studyEvents.map((event) => (
+                          <TimetableCard
+                            key={event.id}
+                            event={event}
+                            layer={35}
+                            onEdit={event.block?.id && onEditBlock ? () => onEditBlock(event.block!) : undefined}
+                          />
+                        ))}
                         <TimetableCard event={{ id: `${dayKey}-sleep`, type: 'sleep', title: 'Recommended sleep', startMinutes: SLEEP_START, endMinutes: SLEEP_END }} layer={10} />
                       </div>
                     );

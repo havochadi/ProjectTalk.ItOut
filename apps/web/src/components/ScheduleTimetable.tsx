@@ -23,7 +23,7 @@ type TimetableEvent = {
 
 const START_MINUTES = 7 * 60;
 const END_MINUTES = 24 * 60;
-const PIXELS_PER_MINUTE = 4 / 3;
+const PIXELS_PER_MINUTE = 1.5;
 const TIMELINE_HEIGHT = (END_MINUTES - START_MINUTES) * PIXELS_PER_MINUTE;
 const QUARTER_HOUR_HEIGHT = 15 * PIXELS_PER_MINUTE;
 const HOUR_HEIGHT = 60 * PIXELS_PER_MINUTE;
@@ -106,6 +106,20 @@ const TimetableCard = ({ event, layer = 20 }: { event: TimetableEvent; layer?: n
   const isCompact = duration <= 35;
   const timeRange = `${clockLabel(event.startMinutes)}–${clockLabel(event.endMinutes)}`;
 
+  if (event.type === 'break' && duration <= 10) {
+    return (
+      <div
+        className="absolute left-2 right-2 flex items-center gap-1 text-[#E7B84D]"
+        style={{ ...positionStyle(event), zIndex: layer }}
+        title={`${event.title} · ${timeRange}`}
+      >
+        <span className="h-px min-w-0 flex-1 border-t border-dashed border-[#B7862C]" />
+        <span className="shrink-0 text-[0.46rem] font-bold leading-none">{duration}m reset</span>
+        <span className="h-px min-w-0 flex-1 border-t border-dashed border-[#B7862C]" />
+      </div>
+    );
+  }
+
   return (
     <div
       className={`absolute left-1.5 right-1.5 overflow-hidden rounded-md border shadow-md ${eventStyles[event.type]} ${event.status === 'done' ? 'opacity-55' : ''}`}
@@ -183,8 +197,8 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
             </div>
 
             <div className="max-h-[72dvh] overflow-auto">
-              <div className="min-w-[1080px]">
-                <div className="sticky top-0 z-50 grid grid-cols-[92px_repeat(7,minmax(140px,1fr))]">
+              <div className="min-w-[1260px]">
+                <div className="sticky top-0 z-50 grid grid-cols-[100px_repeat(7,minmax(165px,1fr))]">
                   <div className="sticky left-0 z-50 flex items-center border-b border-r border-[#3A3453] bg-[#211D32] px-3 py-3 text-[0.65rem] font-bold uppercase tracking-wide text-white/45">
                     Time
                   </div>
@@ -196,7 +210,7 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
                   ))}
                 </div>
 
-                <div className="grid grid-cols-[92px_repeat(7,minmax(140px,1fr))]">
+                <div className="grid grid-cols-[100px_repeat(7,minmax(165px,1fr))]">
                   <div className="sticky left-0 z-40 border-r border-[#3A3453] bg-[#191624]" style={{ height: TIMELINE_HEIGHT }}>
                     {Array.from({ length: Math.floor((END_MINUTES - START_MINUTES) / 30) + 1 }, (_, index) => {
                       const minutes = START_MINUTES + index * 30;

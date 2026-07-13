@@ -139,47 +139,65 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
   }
   if (!dayPlans.length) throw new Error('Choose a start time for at least one day of the week.');
 
-  const recoveryBeforeNext = (sessionCount: number) => {
+  const planningRecoveryBeforeNext = (sessionCount: number) => {
     if (sessionCount === 0) return 0;
-    return sessionCount % 3 === 0 ? 25 : 15;
+    // Reserve enough room even if the final session order changes after ranking.
+    return sessionCount % 3 === 0 ? 20 : 10;
   };
   const canFit = (day: DayPlan, minutes: number) => {
     const capacity = Math.floor((day.end.getTime() - day.start.getTime()) / 60_000);
-    return day.usedMinutes + recoveryBeforeNext(day.sessions.length) + minutes <= capacity;
+    return day.usedMinutes + planningRecoveryBeforeNext(day.sessions.length) + minutes <= capacity;
   };
   const addSession = (day: DayPlan, session: PlannedSession) => {
-    day.usedMinutes += recoveryBeforeNext(day.sessions.length) + session.minutes;
+    day.usedMinutes += planningRecoveryBeforeNext(day.sessions.length) + session.minutes;
     day.sessions.push(session);
   };
 
-  // Revision is a habit rather than a one-off task. Split each topic across
-  // several different study days, with no more than one sitting per topic daily.
+  // Revision is spaced across days and topics are interleaved. Keeping one
+  // revision sitting per study day avoids the dense stacks produced when every
+  // topic is repeated on the same evening.
   const revisionItems = rankedItems.filter((item) => item.workType === 'revision');
-  for (const item of revisionItems) {
+  const revisionSessionsByItem = revisionItems.map((item) => {
     const totalMinutes = Math.max(15, Math.round(Number(item.estimatedMinutes) || 60));
     const daysInOpeningWeek = Math.max(1, dayPlans.filter((day) => day.offset < 7).length);
-    const dailyHabitTarget = Math.min(5, daysInOpeningWeek, Math.max(1, Math.floor(totalMinutes / 15)));
-    const sessionsNeededForManageableLength = Math.ceil(totalMinutes / 45);
+    const sessionsAllowedByMinimumLength = Math.max(1, Math.floor(totalMinutes / 20));
+    const dailyHabitTarget = Math.min(5, daysInOpeningWeek, sessionsAllowedByMinimumLength);
+    const sessionsNeededForManageableLength = Math.ceil(totalMinutes / 40);
     const totalSessions = Math.min(
       dayPlans.length,
       Math.max(dailyHabitTarget, sessionsNeededForManageableLength),
-      Math.max(1, Math.floor(totalMinutes / 15)),
+      sessionsAllowedByMinimumLength,
     );
     const baseMinutes = Math.floor(totalMinutes / totalSessions);
     const extraMinutes = totalMinutes % totalSessions;
 
-    let nextDayIndex = 0;
-    for (let sequence = 1; sequence <= totalSessions; sequence++) {
-      const minutes = baseMinutes + (sequence <= extraMinutes ? 1 : 0);
-      const relativeDayIndex = dayPlans.slice(nextDayIndex).findIndex((candidate) => (
-        !candidate.sessions.some((session) => session.item.id === item.id) && canFit(candidate, minutes)
-      ));
-      if (relativeDayIndex < 0) throw new Error(`There is not enough study time to schedule ${item.title}. Add another study day or choose an earlier start time.`);
-      const dayIndex = nextDayIndex + relativeDayIndex;
-      const day = dayPlans[dayIndex];
-      addSession(day, { item, minutes, sequence, totalSessions });
-      nextDayIndex = dayIndex + 1;
+    return Array.from({ length: totalSessions }, (_, index) => ({
+      item,
+      minutes: baseMinutes + (index < extraMinutes ? 1 : 0),
+      sequence: index + 1,
+      totalSessions,
+    }));
+  });
+  const revisionQueue: PlannedSession[] = [];
+  const longestRevisionPlan = Math.max(0, ...revisionSessionsByItem.map((sessions) => sessions.length));
+  for (let sessionIndex = 0; sessionIndex < longestRevisionPlan; sessionIndex++) {
+    revisionSessionsByItem.forEach((sessions) => {
+      if (sessions[sessionIndex]) revisionQueue.push(sessions[sessionIndex]);
+    });
+  }
+
+  let nextRevisionDayIndex = 0;
+  for (const session of revisionQueue) {
+    const relativeDayIndex = dayPlans.slice(nextRevisionDayIndex).findIndex((candidate) => (
+      !candidate.sessions.some((planned) => planned.item.workType === 'revision') &&
+      canFit(candidate, session.minutes)
+    ));
+    if (relativeDayIndex < 0) {
+      throw new Error(`There is not enough study time to schedule ${session.item.title}. Add another study day or choose an earlier start time.`);
     }
+    const dayIndex = nextRevisionDayIndex + relativeDayIndex;
+    addSession(dayPlans[dayIndex], session);
+    nextRevisionDayIndex = dayIndex + 1;
   }
 
   // Homework keeps its urgency ranking, but is limited to two sittings for the
@@ -242,7 +260,11 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
           ? 'Stop here—the next part is already protected in your timetable.'
           : 'Use the final five minutes to check your work.',
       });
-      const recoveryMinutes = (index + 1) % 3 === 0 ? 25 : 15;
+      // Short revision gets a five-minute reset; longer homework gets ten.
+      // A longer reset is only inserted after three completed focus blocks.
+      const recoveryMinutes = (index + 1) % 3 === 0
+        ? 20
+        : session.minutes <= 30 ? 5 : 10;
       cursor = new Date(end.getTime() + recoveryMinutes * 60_000);
     });
   });
@@ -250,7 +272,7 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
   return {
     rankedItems,
     schedule,
-    rhythm: 'Revision is spread across regular study days. Homework stays deadline-aware, with recovery time and daily limits selected automatically.',
+    rhythm: 'Revision topics rotate across study days. Short focus blocks use five-minute resets, longer homework uses ten, and a longer recovery follows three blocks.',
   };
 }
 

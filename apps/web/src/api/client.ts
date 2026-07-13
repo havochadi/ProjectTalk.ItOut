@@ -387,6 +387,17 @@ export const taskAPI = {
     return { data: { schedule: data || [] } };
   },
 
+  async clearSchedule(): ApiResponse {
+    const userId = await currentUserId();
+    const { error } = await supabase
+      .from('schedule_blocks')
+      .delete()
+      .eq('user_id', userId);
+    if (error) fail(error);
+    announceScheduleChange();
+    return { data: { message: 'Timetable deleted' } };
+  },
+
   async getAll(params: any = {}): ApiResponse {
     const userId = await currentUserId();
     let query: any = supabase

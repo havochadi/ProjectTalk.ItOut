@@ -68,6 +68,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
   const [result, setResult] = useState<ScheduleResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [savedSchedule, setSavedSchedule] = useState<ScheduleBlock[]>([]);
   const scheduledTaskIds = new Set(savedSchedule
     .filter((block) => block.scheduleStatus !== 'done' && new Date(block.end).getTime() >= Date.now())
@@ -154,6 +155,26 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
       toast.error(error?.response?.data?.error || 'Could not save the timetable.');
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const deleteTimetable = async () => {
+    const confirmed = window.confirm(
+      'Delete this timetable? Your homework and revision topics will be kept.'
+    );
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    try {
+      await taskAPI.clearSchedule();
+      setSavedSchedule([]);
+      setResult(null);
+      onChanged();
+      toast.success('Timetable deleted. Your tasks are still available.');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'Could not delete the timetable.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -312,12 +333,23 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
 
               {!result && savedSchedule.length > 0 && (
                 <div className="space-y-3 border-t border-[#3A3453] pt-5">
-                  <div className="flex flex-wrap items-end justify-between gap-2">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold uppercase tracking-wide text-wellness-sage-300">Saved timetable</p>
                       <h2 className="mt-1 text-base font-bold text-white">My weekly plan</h2>
                     </div>
-                    <p className="text-xs text-white/45">Updates when tasks are completed or deleted.</p>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <p className="text-xs text-white/45">Deleting the timetable keeps your tasks.</p>
+                      <button
+                        type="button"
+                        onClick={deleteTimetable}
+                        disabled={isDeleting}
+                        className="flex min-h-10 items-center gap-1.5 rounded-xl border border-red-400/30 bg-red-500/10 px-3 text-xs font-bold text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        {isDeleting ? 'Deleting…' : 'Delete timetable'}
+                      </button>
+                    </div>
                   </div>
                   {unscheduledCount > 0 && (
                     <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2.5 text-xs text-amber-100">

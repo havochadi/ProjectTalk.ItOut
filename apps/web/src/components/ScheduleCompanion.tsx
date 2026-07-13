@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { BellRing, CalendarDays, Clock, X } from 'lucide-react';
+import { BellRing, CalendarDays, Clock, Loader2, Trash2, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { taskAPI } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { ScheduleTimetable } from './ScheduleTimetable';
@@ -10,6 +11,7 @@ export const ScheduleCompanion: React.FC = () => {
   const { user } = useAuth();
   const [schedule, setSchedule] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [dismissedId, setDismissedId] = useState<string | null>(null);
 
@@ -65,6 +67,25 @@ export const ScheduleCompanion: React.FC = () => {
   const shouldAlert = Boolean(nextBlock && minutesUntil !== null && minutesUntil <= 30 && minutesUntil >= -15);
   const alertId = nextBlock ? nextBlock.id || `${nextBlock.taskId}-${nextBlock.start}` : null;
   const showAlert = shouldAlert && dismissedId !== alertId;
+
+  const deleteTimetable = async () => {
+    const confirmed = window.confirm(
+      'Delete this timetable? Your homework and revision topics will be kept.'
+    );
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    try {
+      await taskAPI.clearSchedule();
+      setSchedule([]);
+      setDismissedId(null);
+      toast.success('Timetable deleted. Your tasks are still available.');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'Could not delete the timetable.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (user?.role !== 'student') return null;
 
@@ -123,9 +144,23 @@ export const ScheduleCompanion: React.FC = () => {
                   <h2 className="mt-1 text-xl font-bold">My weekly timetable</h2>
                   <p className="mt-1 text-sm text-white/55">Homework, revision, school, breaks, and recommended sleep in one weekly view.</p>
                 </div>
-                <button type="button" onClick={() => setIsOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-full border border-[#3A3453] text-white/55 hover:bg-white/5 hover:text-white" aria-label="Close timetable">
-                  <X className="h-5 w-5" />
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  {schedule.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={deleteTimetable}
+                      disabled={isDeleting}
+                      className="flex min-h-11 items-center gap-1.5 rounded-xl border border-red-400/30 bg-red-500/10 px-3 text-xs font-bold text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      aria-label="Delete timetable"
+                    >
+                      {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      <span className="hidden sm:inline">{isDeleting ? 'Deleting…' : 'Delete'}</span>
+                    </button>
+                  )}
+                  <button type="button" onClick={() => setIsOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-full border border-[#3A3453] text-white/55 hover:bg-white/5 hover:text-white" aria-label="Close timetable">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
               </header>
 
               {schedule.length ? (

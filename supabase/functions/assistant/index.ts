@@ -82,7 +82,7 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
         ...item,
         score,
         reason: item.workType === 'revision'
-          ? `${item.importance >= 4 ? 'High-priority' : 'Planned'} revision with flexible timing.`
+          ? `${item.importance >= 4 ? 'High-priority' : 'Planned'} ${item.estimatedMinutes}-minute daily revision target, split into manageable sessions when needed.`
           : `${item.importance >= 4 ? 'High importance' : 'Moderate importance'}${item.deadline ? ` with a deadline on ${new Date(item.deadline).toLocaleDateString('en-SG')}` : ''}.`,
       };
     })
@@ -153,51 +153,35 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
     day.sessions.push(session);
   };
 
-  // Revision is spaced across days and topics are interleaved. Keeping one
-  // revision sitting per study day avoids the dense stacks produced when every
-  // topic is repeated on the same evening.
+  // A revision estimate is a DAILY target. Repeat that exact target on every
+  // enabled study day in the opening seven-day plan, splitting longer targets
+  // into balanced sessions of roughly 20–30 minutes.
   const revisionItems = rankedItems.filter((item) => item.workType === 'revision');
-  const revisionSessionsByItem = revisionItems.map((item) => {
-    const totalMinutes = Math.max(15, Math.round(Number(item.estimatedMinutes) || 60));
-    const daysInOpeningWeek = Math.max(1, dayPlans.filter((day) => day.offset < 7).length);
-    const sessionsAllowedByMinimumLength = Math.max(1, Math.floor(totalMinutes / 20));
-    const dailyHabitTarget = Math.min(5, daysInOpeningWeek, sessionsAllowedByMinimumLength);
-    const sessionsNeededForManageableLength = Math.ceil(totalMinutes / 40);
-    const totalSessions = Math.min(
-      dayPlans.length,
-      Math.max(dailyHabitTarget, sessionsNeededForManageableLength),
-      sessionsAllowedByMinimumLength,
-    );
-    const baseMinutes = Math.floor(totalMinutes / totalSessions);
-    const extraMinutes = totalMinutes % totalSessions;
-
-    return Array.from({ length: totalSessions }, (_, index) => ({
-      item,
-      minutes: baseMinutes + (index < extraMinutes ? 1 : 0),
-      sequence: index + 1,
-      totalSessions,
-    }));
-  });
-  const revisionQueue: PlannedSession[] = [];
-  const longestRevisionPlan = Math.max(0, ...revisionSessionsByItem.map((sessions) => sessions.length));
-  for (let sessionIndex = 0; sessionIndex < longestRevisionPlan; sessionIndex++) {
-    revisionSessionsByItem.forEach((sessions) => {
-      if (sessions[sessionIndex]) revisionQueue.push(sessions[sessionIndex]);
+  const openingWeekDays = dayPlans.filter((day) => day.offset < 7);
+  for (const day of openingWeekDays) {
+    const dailySessionsByItem = revisionItems.map((item) => {
+      const dailyMinutes = Math.max(15, Math.round(Number(item.estimatedMinutes) || 60));
+      const totalSessions = dailyMinutes <= 40 ? 1 : Math.ceil(dailyMinutes / 30);
+      const baseMinutes = Math.floor(dailyMinutes / totalSessions);
+      const extraMinutes = dailyMinutes % totalSessions;
+      return Array.from({ length: totalSessions }, (_, index) => ({
+        item,
+        minutes: baseMinutes + (index < extraMinutes ? 1 : 0),
+        sequence: index + 1,
+        totalSessions,
+      }));
     });
-  }
-
-  let nextRevisionDayIndex = 0;
-  for (const session of revisionQueue) {
-    const relativeDayIndex = dayPlans.slice(nextRevisionDayIndex).findIndex((candidate) => (
-      !candidate.sessions.some((planned) => planned.item.workType === 'revision') &&
-      canFit(candidate, session.minutes)
-    ));
-    if (relativeDayIndex < 0) {
-      throw new Error(`There is not enough study time to schedule ${session.item.title}. Add another study day or choose an earlier start time.`);
+    const longestDailyPlan = Math.max(0, ...dailySessionsByItem.map((sessions) => sessions.length));
+    for (let sessionIndex = 0; sessionIndex < longestDailyPlan; sessionIndex++) {
+      for (const sessions of dailySessionsByItem) {
+        const session = sessions[sessionIndex];
+        if (!session) continue;
+        if (!canFit(day, session.minutes)) {
+          throw new Error(`The daily revision target for ${session.item.title} does not fit on ${dayString(day.offset)}. Choose an earlier start time or reduce the minutes per day.`);
+        }
+        addSession(day, session);
+      }
     }
-    const dayIndex = nextRevisionDayIndex + relativeDayIndex;
-    addSession(dayPlans[dayIndex], session);
-    nextRevisionDayIndex = dayIndex + 1;
   }
 
   // Homework keeps its urgency ranking, but is limited to two sittings for the
@@ -233,13 +217,23 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
   }
 
   dayPlans.filter((day) => day.sessions.length).forEach((day) => {
-    // Put deadline-based homework first, then finish the day with revision.
-    day.sessions.sort((a, b) => {
-      const typeOrder = Number(a.item.workType === 'revision') - Number(b.item.workType === 'revision');
-      return typeOrder || a.item.rank - b.item.rank || a.sequence - b.sequence;
-    });
+    // Alternate urgent homework with revision so a split daily revision target
+    // is genuinely distributed through the evening instead of stacked together.
+    const homeworkSessions = day.sessions
+      .filter((session) => session.item.workType !== 'revision')
+      .sort((a, b) => a.item.rank - b.item.rank || a.sequence - b.sequence);
+    const revisionSessions = day.sessions
+      .filter((session) => session.item.workType === 'revision')
+      .sort((a, b) => a.sequence - b.sequence || a.item.rank - b.item.rank);
+    const orderedSessions: PlannedSession[] = [];
+    while (homeworkSessions.length || revisionSessions.length) {
+      const homework = homeworkSessions.shift();
+      if (homework) orderedSessions.push(homework);
+      const revision = revisionSessions.shift();
+      if (revision) orderedSessions.push(revision);
+    }
     let cursor = new Date(day.start);
-    day.sessions.forEach((session, index) => {
+    orderedSessions.forEach((session, index) => {
       const end = new Date(cursor.getTime() + session.minutes * 60_000);
       const isRevision = session.item.workType === 'revision';
       schedule.push({
@@ -255,7 +249,7 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
         rank: session.item.rank,
         sequence: session.sequence,
         tip: isRevision
-          ? 'Finish by recalling the main ideas without looking at your notes.'
+          ? `This is session ${session.sequence} of ${session.totalSessions} for today's ${session.item.estimatedMinutes}-minute revision target. Finish with active recall.`
           : session.sequence < session.totalSessions
           ? 'Stop here—the next part is already protected in your timetable.'
           : 'Use the final five minutes to check your work.',
@@ -272,7 +266,7 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
   return {
     rankedItems,
     schedule,
-    rhythm: 'Revision topics rotate across study days. Short focus blocks use five-minute resets, longer homework uses ten, and a longer recovery follows three blocks.',
+    rhythm: 'Each revision topic reaches its full daily minute target on every enabled study day. Longer targets are split across the day with short resets between sessions.',
   };
 }
 

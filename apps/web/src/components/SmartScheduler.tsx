@@ -170,7 +170,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-bold sm:text-base">Smart scheduler assistant</span>
-          <span className="block text-xs text-white/60">Build a weekly task and revision plan without overloading yourself.</span>
+          <span className="block text-xs text-white/60">Build a weekly homework plan with clear daily revision targets.</span>
         </span>
         {isOpen ? <ChevronUp className="h-5 w-5 shrink-0" /> : <ChevronDown className="h-5 w-5 shrink-0" />}
       </button>
@@ -238,8 +238,9 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
                           )}
                         </label>
                         <label>
-                          <span className="mb-1 block text-xs font-semibold text-white/80">Total minutes needed</span>
+                          <span className="mb-1 block text-xs font-semibold text-white/80">{item.workType === 'revision' ? 'Revision minutes per day' : 'Total minutes needed'}</span>
                           <input type="number" min="15" step="15" className={fieldClass} value={item.estimatedMinutes} onChange={(event) => updateItem(item.id, 'estimatedMinutes', Number(event.target.value))} />
+                          {item.workType === 'revision' && <span className="mt-1 block text-[0.65rem] leading-snug text-white/45">This full amount is scheduled on every enabled study day and may be split into sessions.</span>}
                         </label>
                         <label>
                           <span className="mb-1 block text-xs font-semibold text-white/80">Priority</span>
@@ -296,7 +297,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
                     );
                   })}
                 </div>
-                <p className="mt-3 text-xs leading-relaxed text-white/50">Weekday sessions start after the default 8 AM–3 PM school day. Revision topics rotate across days with short five-minute resets; longer homework receives ten-minute resets and the plan protects an 11 PM–7 AM sleep window.</p>
+                <p className="mt-3 text-xs leading-relaxed text-white/50">Weekday sessions start after the default 8 AM–3 PM school day. Each revision target repeats on every enabled study day and can be split across the evening; longer homework receives ten-minute resets and the plan protects an 11 PM–7 AM sleep window.</p>
               </div>
 
               <button

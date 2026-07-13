@@ -159,6 +159,8 @@ export const TasksPage: React.FC = () => {
         workType: 'revision',
         priority: topic.priority || block.priority || 'med',
         estimatedMinutes: Math.max(1, Math.round((new Date(block.end).getTime() - new Date(block.start).getTime()) / 60_000)),
+        dailyTargetMinutes: topic.estimatedMinutes || 60,
+        isScheduledRevision: true,
         scheduledStart: block.start,
         scheduledEnd: block.end,
       };
@@ -245,7 +247,11 @@ export const TasksPage: React.FC = () => {
 
                     <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[0.65rem]">
                       <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 font-semibold capitalize text-white/60">{task.workType || 'homework'}</span>
-                      <span className="text-white/50">{task.estimatedMinutes || 60} min</span>
+                      <span className="text-white/50">
+                        {task.isScheduledRevision
+                          ? `${task.estimatedMinutes} min session · ${task.dailyTargetMinutes} min/day`
+                          : `${task.estimatedMinutes || 60} min`}
+                      </span>
                     </div>
                     {task.subject && <p className="mb-2 text-xs text-white/50">{task.subject}</p>}
                     {task.dueAt && (
@@ -344,8 +350,9 @@ export const TasksPage: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-text">Total minutes needed</label>
+              <label className="mb-1.5 block text-sm font-semibold text-text">{newTask.workType === 'revision' ? 'Revision minutes per day' : 'Total minutes needed'}</label>
               <input type="number" min="15" step="15" value={newTask.estimatedMinutes} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTask((p) => ({ ...p, estimatedMinutes: Number(e.target.value) }))} className="w-full rounded-xl border border-border bg-surface-alt px-3 py-2.5 text-sm text-text focus:border-wellness-sage-400 focus:outline-none" />
+              {newTask.workType === 'revision' && <p className="mt-1 text-xs leading-relaxed text-muted">This amount repeats on every enabled study day. The scheduler may divide it into smaller sessions.</p>}
             </div>
           </div>
           <div>

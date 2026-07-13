@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button, Input, Modal } from '@talkitout/ui';
 import { taskAPI } from '../api/client';
 import toast from 'react-hot-toast';
-import { Plus, Trash2, Lightbulb, Circle, Loader2, Pencil } from 'lucide-react';
+import { Plus, Trash2, Lightbulb, Circle, Loader2, Pencil, Clock3 } from 'lucide-react';
 import { SmartScheduler } from '../components/SmartScheduler';
 
 interface StudySuggestion {
@@ -24,8 +24,19 @@ const priorityStyle: Record<string, string> = {
   low:  'border-wellness-sage-300 bg-wellness-sage-50 text-wellness-sage-700',
 };
 
+const singaporeDayKey = (value: string | Date) => new Date(value).toLocaleDateString('en-CA', {
+  timeZone: 'Asia/Singapore',
+});
+
+const scheduledTime = (value: string) => new Date(value).toLocaleTimeString('en-SG', {
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZone: 'Asia/Singapore',
+});
+
 export const TasksPage: React.FC = () => {
   const [tasks, setTasks] = useState<any[]>([]);
+  const [scheduleBlocks, setScheduleBlocks] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', subject: '', priority: 'med', dueAt: '', workType: 'homework', estimatedMinutes: 60 });
   const [editingTask, setEditingTask] = useState<any | null>(null);
@@ -36,11 +47,18 @@ export const TasksPage: React.FC = () => {
   useEffect(() => { loadTasks(); }, []);
 
   const loadTasks = async () => {
-    try {
-      const res = await taskAPI.getAll();
-      const payload = res?.data?.tasks ?? res?.data ?? [];
+    const [taskResult, scheduleResult] = await Promise.allSettled([
+      taskAPI.getAll(),
+      taskAPI.getSavedSchedule(),
+    ]);
+    if (taskResult.status === 'fulfilled') {
+      const payload = taskResult.value?.data?.tasks ?? taskResult.value?.data ?? [];
       setTasks(Array.isArray(payload) ? payload : []);
-    } catch { toast.error('Failed to load tasks'); setTasks([]); }
+    } else {
+      toast.error('Failed to load tasks');
+      setTasks([]);
+    }
+    setScheduleBlocks(scheduleResult.status === 'fulfilled' ? scheduleResult.value?.data?.schedule || [] : []);
   };
 
   const loadStudyTips = async (taskId: string) => {
@@ -100,10 +118,17 @@ export const TasksPage: React.FC = () => {
     } catch (e: any) { toast.error(e?.response?.data?.message || 'Failed to save task'); }
   };
 
-  const handleStatusChange = async (taskId: string, status: string) => {
+  const handleStatusChange = async (task: any, status: string) => {
     try {
-      await taskAPI.updateStatus(taskId, status);
-      setTasks((prev) => prev.map((t) => (t._id === taskId ? { ...t, status } : t)));
+      if (task.scheduleBlockId) {
+        await taskAPI.updateScheduleBlockStatus(task.scheduleBlockId, status);
+        setScheduleBlocks((current) => current.map((block) => (
+          block.id === task.scheduleBlockId ? { ...block, scheduleStatus: status } : block
+        )));
+      } else {
+        await taskAPI.updateStatus(task._id, status);
+        setTasks((prev) => prev.map((item) => (item._id === task._id ? { ...item, status } : item)));
+      }
     } catch { toast.error('Failed to update task'); }
   };
 
@@ -112,13 +137,39 @@ export const TasksPage: React.FC = () => {
     try {
       await taskAPI.delete(taskId);
       setTasks((prev) => prev.filter((t) => t._id !== taskId));
+      setScheduleBlocks((current) => current.filter((block) => block.taskId !== taskId));
       toast.success('Task removed');
     } catch { toast.error('Failed to delete task'); }
   };
 
-  const completedCount = tasks.filter((task) => task.status === 'done').length;
-  const remainingCount = tasks.length - completedCount;
-  const progressPercent = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;
+  const today = singaporeDayKey(new Date());
+  const taskById = new Map(tasks.map((task) => [task._id, task]));
+  const todaysRevisionSessions = scheduleBlocks
+    .filter((block) => block.workType === 'revision' && singaporeDayKey(block.start) === today)
+    .map((block) => {
+      const topic = taskById.get(block.taskId) || {};
+      return {
+        ...topic,
+        _id: block.taskId,
+        boardId: `revision-session-${block.id}`,
+        scheduleBlockId: block.id,
+        status: block.scheduleStatus || 'todo',
+        title: topic.title || block.title,
+        subject: topic.subject || block.subject,
+        workType: 'revision',
+        priority: topic.priority || block.priority || 'med',
+        estimatedMinutes: Math.max(1, Math.round((new Date(block.end).getTime() - new Date(block.start).getTime()) / 60_000)),
+        scheduledStart: block.start,
+        scheduledEnd: block.end,
+      };
+    });
+  const boardTasks = [
+    ...tasks.filter((task) => (task.workType || 'homework') !== 'revision'),
+    ...todaysRevisionSessions,
+  ];
+  const completedCount = boardTasks.filter((task) => task.status === 'done').length;
+  const remainingCount = boardTasks.length - completedCount;
+  const progressPercent = boardTasks.length ? Math.round((completedCount / boardTasks.length) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -143,12 +194,12 @@ export const TasksPage: React.FC = () => {
         <div className="shrink-0">
           <p className="text-xs font-bold uppercase tracking-wide text-white/45">Your progress</p>
           <p className="mt-0.5 text-sm font-semibold">
-            {remainingCount ? `${remainingCount} item${remainingCount === 1 ? '' : 's'} left to complete` : tasks.length ? 'Everything is complete — well done!' : 'No tasks added yet'}
+            {remainingCount ? `${remainingCount} item${remainingCount === 1 ? '' : 's'} left to complete` : boardTasks.length ? 'Everything is complete — well done!' : 'Nothing scheduled for today'}
           </p>
         </div>
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex justify-between text-[0.65rem] text-white/50">
-            <span>{completedCount} of {tasks.length} done</span><span>{progressPercent}%</span>
+            <span>{completedCount} of {boardTasks.length} done</span><span>{progressPercent}%</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-black/25">
             <motion.div initial={false} animate={{ width: `${progressPercent}%` }} className="h-full rounded-full bg-wellness-sage-500" />
@@ -161,7 +212,7 @@ export const TasksPage: React.FC = () => {
       {/* Kanban */}
       <div className="grid gap-5 md:grid-cols-3">
         {columns.map((col) => {
-          const colTasks = tasks.filter((t) => t.status === col.status);
+          const colTasks = boardTasks.filter((t) => t.status === col.status);
           return (
             <div key={col.status} className={`rounded-2xl border ${col.ring} ${col.color} p-4`}>
               <div className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3">
@@ -173,7 +224,7 @@ export const TasksPage: React.FC = () => {
               <div className="space-y-3 min-h-[80px]">
                 {colTasks.map((task) => (
                   <motion.div
-                    key={task._id}
+                    key={task.boardId || task._id}
                     layout
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -202,6 +253,12 @@ export const TasksPage: React.FC = () => {
                         Due {new Date(task.dueAt).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}
                       </p>
                     )}
+                    {task.scheduledStart && (
+                      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-wellness-sky-300">
+                        <Clock3 className="h-3.5 w-3.5" />
+                        Today, {scheduledTime(task.scheduledStart)}–{scheduledTime(task.scheduledEnd)}
+                      </p>
+                    )}
 
                     <div className="flex items-center justify-between gap-2">
                       <span className={`rounded-full border px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${priorityStyle[task.priority] || priorityStyle.low}`}>
@@ -209,7 +266,7 @@ export const TasksPage: React.FC = () => {
                       </span>
                       <select
                         value={task.status}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleStatusChange(task._id, e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleStatusChange(task, e.target.value)}
                         className="rounded-lg border border-white/10 bg-[#211D32] px-2 py-1 text-xs text-white focus:outline-none"
                       >
                         <option value="todo">To Do</option>

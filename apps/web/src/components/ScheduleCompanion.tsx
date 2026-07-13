@@ -56,7 +56,7 @@ export const ScheduleCompanion: React.FC = () => {
   }, [isOpen]);
 
   const nextBlock = useMemo(
-    () => schedule.find((block) => new Date(block.end).getTime() > now),
+    () => schedule.find((block) => block.scheduleStatus !== 'done' && new Date(block.end).getTime() > now),
     [schedule, now]
   );
   const minutesUntil = nextBlock

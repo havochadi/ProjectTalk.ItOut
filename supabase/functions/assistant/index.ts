@@ -90,9 +90,6 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
     .map((item, index) => ({ ...item, rank: index + 1 }));
 
   const schedule: Array<Record<string, unknown>> = [];
-  let dayOffset = 0;
-  let cursor: Date | null = null;
-  let blocksToday = 0;
   const dayString = (offset: number) => {
     const date = new Date(`${startDate}T12:00:00Z`);
     date.setUTCDate(date.getUTCDate() + offset);
@@ -118,60 +115,142 @@ function buildSmartSchedule(items: SchedulerItem[], preferences: Record<string, 
     const bedtime = new Date(`${dateString}T23:00:00+08:00`);
     return { start, end: preferredEnd < bedtime ? preferredEnd : bedtime };
   };
-  const moveToAvailableDay = () => {
-    for (let attempts = 0; attempts < 14; attempts++) {
-      const details = dayDetails(dayOffset);
-      if (details) {
-        cursor = details.start;
-        blocksToday = 0;
-        return details;
-      }
-      dayOffset++;
-    }
-    throw new Error('Choose a start time for at least one day of the week.');
+  type RankedItem = (typeof rankedItems)[number];
+  type PlannedSession = {
+    item: RankedItem;
+    minutes: number;
+    sequence: number;
+    totalSessions: number;
+  };
+  type DayPlan = {
+    offset: number;
+    start: Date;
+    end: Date;
+    sessions: PlannedSession[];
+    usedMinutes: number;
   };
 
-  for (const item of rankedItems) {
-    let remaining = Math.max(15, item.estimatedMinutes);
-    // Automatically vary session length based on effort and importance.
-    const sessionMinutes = remaining <= 45 ? Math.max(25, remaining) : item.importance >= 4 ? 50 : 40;
-    const blocks = Math.ceil(remaining / sessionMinutes);
-    let block = 1;
-    while (remaining > 0) {
-      let details = dayDetails(dayOffset);
-      if (!cursor || !details) details = moveToAvailableDay();
-      const blockMinutes = Math.min(sessionMinutes, remaining);
-      let end = new Date(cursor!.getTime() + blockMinutes * 60_000);
-      if (end > details.end) {
-        dayOffset++;
-        details = moveToAvailableDay();
-        end = new Date(cursor!.getTime() + blockMinutes * 60_000);
-      }
-      schedule.push({
-        taskId: item.id,
-        title: blocks > 1 ? `${item.title} (${block}/${blocks})` : item.title,
-        subject: item.subject || null,
-        workType: item.workType,
-        start: cursor!.toISOString(),
-        end: end.toISOString(),
-        priority: item.importance >= 4 ? 'high' : item.importance >= 3 ? 'med' : 'low',
-        rank: item.rank,
-        sequence: block,
-        tip: block < blocks ? 'Stop at the end of this session—the next part is already scheduled.' : 'Use the final five minutes to check your work.',
-      });
-      remaining -= blockMinutes;
-      block++;
-      blocksToday++;
-      // Choose recovery automatically, including a longer reset after every third session.
-      const recoveryMinutes = blocksToday % 3 === 0 ? 25 : 15;
-      cursor = new Date(end.getTime() + recoveryMinutes * 60_000);
+  // Keep enough future study days available for large workloads without imposing
+  // a duration cap on an individual homework or revision topic.
+  const dayPlans: DayPlan[] = [];
+  for (let offset = 0; offset < 366; offset++) {
+    const details = dayDetails(offset);
+    if (details) dayPlans.push({ offset, ...details, sessions: [], usedMinutes: 0 });
+  }
+  if (!dayPlans.length) throw new Error('Choose a start time for at least one day of the week.');
+
+  const recoveryBeforeNext = (sessionCount: number) => {
+    if (sessionCount === 0) return 0;
+    return sessionCount % 3 === 0 ? 25 : 15;
+  };
+  const canFit = (day: DayPlan, minutes: number) => {
+    const capacity = Math.floor((day.end.getTime() - day.start.getTime()) / 60_000);
+    return day.usedMinutes + recoveryBeforeNext(day.sessions.length) + minutes <= capacity;
+  };
+  const addSession = (day: DayPlan, session: PlannedSession) => {
+    day.usedMinutes += recoveryBeforeNext(day.sessions.length) + session.minutes;
+    day.sessions.push(session);
+  };
+
+  // Revision is a habit rather than a one-off task. Split each topic across
+  // several different study days, with no more than one sitting per topic daily.
+  const revisionItems = rankedItems.filter((item) => item.workType === 'revision');
+  for (const item of revisionItems) {
+    const totalMinutes = Math.max(15, Math.round(Number(item.estimatedMinutes) || 60));
+    const daysInOpeningWeek = Math.max(1, dayPlans.filter((day) => day.offset < 7).length);
+    const dailyHabitTarget = Math.min(5, daysInOpeningWeek, Math.max(1, Math.floor(totalMinutes / 15)));
+    const sessionsNeededForManageableLength = Math.ceil(totalMinutes / 45);
+    const totalSessions = Math.min(
+      dayPlans.length,
+      Math.max(dailyHabitTarget, sessionsNeededForManageableLength),
+      Math.max(1, Math.floor(totalMinutes / 15)),
+    );
+    const baseMinutes = Math.floor(totalMinutes / totalSessions);
+    const extraMinutes = totalMinutes % totalSessions;
+
+    let nextDayIndex = 0;
+    for (let sequence = 1; sequence <= totalSessions; sequence++) {
+      const minutes = baseMinutes + (sequence <= extraMinutes ? 1 : 0);
+      const relativeDayIndex = dayPlans.slice(nextDayIndex).findIndex((candidate) => (
+        !candidate.sessions.some((session) => session.item.id === item.id) && canFit(candidate, minutes)
+      ));
+      if (relativeDayIndex < 0) throw new Error(`There is not enough study time to schedule ${item.title}. Add another study day or choose an earlier start time.`);
+      const dayIndex = nextDayIndex + relativeDayIndex;
+      const day = dayPlans[dayIndex];
+      addSession(day, { item, minutes, sequence, totalSessions });
+      nextDayIndex = dayIndex + 1;
     }
   }
+
+  // Homework keeps its urgency ranking, but is limited to two sittings for the
+  // same task per day so long assignments do not swallow a whole evening.
+  const homeworkItems = rankedItems.filter((item) => item.workType !== 'revision');
+  for (const item of homeworkItems) {
+    const totalMinutes = Math.max(15, Math.round(Number(item.estimatedMinutes) || 60));
+    const preferredSessionMinutes = item.importance >= 4 ? 50 : 40;
+    const sessionLengths: number[] = [];
+    let remaining = totalMinutes;
+    while (remaining > 0) {
+      const nextRemainder = remaining - preferredSessionMinutes;
+      const minutes = nextRemainder > 0 && nextRemainder < 15
+        ? remaining
+        : Math.min(preferredSessionMinutes, remaining);
+      sessionLengths.push(minutes);
+      remaining -= minutes;
+    }
+
+    sessionLengths.forEach((minutes, index) => {
+      const preferred = dayPlans.find((candidate) => (
+        candidate.sessions.filter((session) => session.item.id === item.id).length < 2 && canFit(candidate, minutes)
+      ));
+      const day = preferred || dayPlans.find((candidate) => canFit(candidate, minutes));
+      if (!day) throw new Error(`There is not enough study time to schedule ${item.title}. Add another study day or choose an earlier start time.`);
+      addSession(day, {
+        item,
+        minutes,
+        sequence: index + 1,
+        totalSessions: sessionLengths.length,
+      });
+    });
+  }
+
+  dayPlans.filter((day) => day.sessions.length).forEach((day) => {
+    // Put deadline-based homework first, then finish the day with revision.
+    day.sessions.sort((a, b) => {
+      const typeOrder = Number(a.item.workType === 'revision') - Number(b.item.workType === 'revision');
+      return typeOrder || a.item.rank - b.item.rank || a.sequence - b.sequence;
+    });
+    let cursor = new Date(day.start);
+    day.sessions.forEach((session, index) => {
+      const end = new Date(cursor.getTime() + session.minutes * 60_000);
+      const isRevision = session.item.workType === 'revision';
+      schedule.push({
+        taskId: session.item.id,
+        title: isRevision || session.totalSessions === 1
+          ? session.item.title
+          : `${session.item.title} (${session.sequence}/${session.totalSessions})`,
+        subject: session.item.subject || null,
+        workType: session.item.workType,
+        start: cursor.toISOString(),
+        end: end.toISOString(),
+        priority: session.item.importance >= 4 ? 'high' : session.item.importance >= 3 ? 'med' : 'low',
+        rank: session.item.rank,
+        sequence: session.sequence,
+        tip: isRevision
+          ? 'Finish by recalling the main ideas without looking at your notes.'
+          : session.sequence < session.totalSessions
+          ? 'Stop here—the next part is already protected in your timetable.'
+          : 'Use the final five minutes to check your work.',
+      });
+      const recoveryMinutes = (index + 1) % 3 === 0 ? 25 : 15;
+      cursor = new Date(end.getTime() + recoveryMinutes * 60_000);
+    });
+  });
 
   return {
     rankedItems,
     schedule,
-    rhythm: 'Work sessions, recovery breaks, and daily limits were selected automatically to keep revision sustainable.',
+    rhythm: 'Revision is spread across regular study days. Homework stays deadline-aware, with recovery time and daily limits selected automatically.',
   };
 }
 

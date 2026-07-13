@@ -2,26 +2,31 @@ import React, { useMemo } from 'react';
 import { BookOpen, ClipboardCheck, Coffee, GraduationCap, Moon } from 'lucide-react';
 
 type ScheduleBlock = {
+  id?: string;
   title: string;
   start: string;
   end: string;
   workType?: 'homework' | 'revision';
   sequence?: number;
+  scheduleStatus?: 'todo' | 'doing' | 'done';
 };
 
-type BreakBlock = {
+type TimetableEvent = {
+  id: string;
+  type: 'homework' | 'revision' | 'school' | 'break' | 'sleep';
+  title: string;
   startMinutes: number;
   endMinutes: number;
-  duration: number;
+  sequence?: number;
+  status?: 'todo' | 'doing' | 'done';
 };
 
-const START_HOUR = 7;
-const END_HOUR = 24;
-const HOUR_HEIGHT = 60;
-const TIMELINE_HEIGHT = (END_HOUR - START_HOUR) * HOUR_HEIGHT;
 const SCHOOL_START = 8 * 60;
 const SCHOOL_END = 15 * 60;
+const LUNCH_START = 12 * 60 + 30;
+const LUNCH_END = 13 * 60;
 const SLEEP_START = 23 * 60;
+const SLEEP_END = 7 * 60;
 
 const singaporeDate = (iso: string) => new Date(new Date(iso).getTime() + 8 * 60 * 60 * 1000);
 const dateKey = (date: Date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
@@ -35,22 +40,14 @@ const minutesOfDay = (iso: string) => {
   const date = singaporeDate(iso);
   return date.getUTCHours() * 60 + date.getUTCMinutes();
 };
-const clockLabel = (minutes: number, includeMinutes = true) => {
-  const hours = Math.floor(minutes / 60) % 24;
-  const minute = minutes % 60;
-  const minuteLabel = includeMinutes ? `:${String(minute).padStart(2, '0')}` : '';
-  return `${hours % 12 || 12}${minuteLabel} ${hours >= 12 ? 'PM' : 'AM'}`;
-};
-const timeLabel = (iso: string) => clockLabel(minutesOfDay(iso));
-const positionStyle = (startMinutes: number, endMinutes: number) => {
-  const visibleStart = Math.max(startMinutes, START_HOUR * 60);
-  const visibleEnd = Math.min(endMinutes, END_HOUR * 60);
-  const top = ((visibleStart - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-  const naturalHeight = ((visibleEnd - visibleStart) / 60) * HOUR_HEIGHT;
-  return { top, height: Math.max(1, naturalHeight) };
+const clockLabel = (minutes: number) => {
+  const normalized = ((minutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const hours = Math.floor(normalized / 60);
+  const minute = normalized % 60;
+  return `${hours % 12 || 12}:${String(minute).padStart(2, '0')} ${hours >= 12 ? 'PM' : 'AM'}`;
 };
 
-const getBreaks = (blocks: ScheduleBlock[]): BreakBlock[] => {
+const getBreakEvents = (blocks: ScheduleBlock[], day: string): TimetableEvent[] => {
   const sorted = [...blocks].sort((a, b) => a.start.localeCompare(b.start));
   return sorted.slice(0, -1).flatMap((block, index) => {
     const next = sorted[index + 1];
@@ -58,8 +55,31 @@ const getBreaks = (blocks: ScheduleBlock[]): BreakBlock[] => {
     const endMinutes = minutesOfDay(next.start);
     const duration = endMinutes - startMinutes;
     if (duration < 5 || duration > 45) return [];
-    return [{ startMinutes, endMinutes, duration }];
+    return [{
+      id: `${day}-break-${startMinutes}`,
+      type: 'break' as const,
+      title: `${duration} min reset`,
+      startMinutes,
+      endMinutes,
+    }];
   });
+};
+
+const eventStyles: Record<TimetableEvent['type'], string> = {
+  homework: 'border-[#4D4594] bg-[#211A57] text-[#DCD8FF]',
+  revision: 'border-[#31586E] bg-[#122735] text-[#C7EBFF]',
+  school: 'border-[#444475] bg-[#20203E] text-[#D7D8FF]',
+  break: 'border-[#73551E] bg-[#3A2B16] text-[#FFE1A0]',
+  sleep: 'border-[#4B426F] bg-[#28213D] text-[#DDD2FF]',
+};
+
+const EventIcon = ({ type }: { type: TimetableEvent['type'] }) => {
+  const className = 'h-3.5 w-3.5 shrink-0';
+  if (type === 'revision') return <BookOpen className={className} />;
+  if (type === 'homework') return <ClipboardCheck className={className} />;
+  if (type === 'school') return <GraduationCap className={className} />;
+  if (type === 'sleep') return <Moon className={className} />;
+  return <Coffee className={className} />;
 };
 
 export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ blocks }) => {
@@ -79,13 +99,14 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-x-4 gap-y-2 text-[0.65rem] font-semibold text-white/55">
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-wellness-sage-500/70" /> Homework</span>
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-wellness-sky-500/70" /> Revision</span>
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-indigo-400/60" /> School</span>
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-amber-400/70" /> Break</span>
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-violet-400/60" /> Sleep</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#6F61CF]" /> Homework</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#4C88A7]" /> Revision</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#6868A7]" /> School</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#B48324]" /> Break</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#7766A8]" /> Sleep</span>
       </div>
-      <p className="text-xs text-white/45 sm:hidden">Swipe sideways and scroll down to explore the full week.</p>
+      <p className="text-xs text-white/45 sm:hidden">Swipe sideways to view every day.</p>
+
       {weeks.map(([weekKey, scheduledDays], weekIndex) => {
         const monday = fromKey(weekKey);
         const days = Array.from({ length: 7 }, (_, index) => {
@@ -93,120 +114,89 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[] }> = ({ block
           date.setUTCDate(monday.getUTCDate() + index);
           return date;
         });
+        const eventsByDay = new Map<string, TimetableEvent[]>();
+
+        days.forEach((day) => {
+          const dayKey = dateKey(day);
+          const dayBlocks = scheduledDays.get(dayKey) || [];
+          const isSchoolDay = day.getUTCDay() >= 1 && day.getUTCDay() <= 5;
+          const fixedEvents: TimetableEvent[] = isSchoolDay ? [
+            { id: `${dayKey}-school`, type: 'school', title: 'School day', startMinutes: SCHOOL_START, endMinutes: SCHOOL_END },
+            { id: `${dayKey}-lunch`, type: 'break', title: 'Lunch break', startMinutes: LUNCH_START, endMinutes: LUNCH_END },
+          ] : [];
+          const studyEvents: TimetableEvent[] = dayBlocks.map((block) => ({
+            id: block.id || `${block.start}-${block.title}`,
+            type: block.workType === 'revision' ? 'revision' : 'homework',
+            title: block.title,
+            startMinutes: minutesOfDay(block.start),
+            endMinutes: minutesOfDay(block.end),
+            sequence: block.sequence,
+            status: block.scheduleStatus,
+          }));
+          const dayEvents: TimetableEvent[] = [
+            ...fixedEvents,
+            ...studyEvents,
+            ...getBreakEvents(dayBlocks, dayKey),
+            { id: `${dayKey}-sleep`, type: 'sleep', title: 'Recommended sleep', startMinutes: SLEEP_START, endMinutes: SLEEP_END },
+          ];
+          eventsByDay.set(dayKey, dayEvents.sort((a, b) => a.startMinutes - b.startMinutes));
+        });
+
+        const rowTimes = [...new Set(
+          [...eventsByDay.values()].flatMap((events) => events.map((event) => event.startMinutes))
+        )].sort((a, b) => a - b);
 
         return (
-          <section key={weekKey} className="overflow-hidden rounded-xl border border-[#3A3453] bg-[#13111C]">
-            <div className="border-b border-[#3A3453] bg-[#211D32] px-4 py-2.5 text-xs font-bold text-white/70">
+          <section key={weekKey} className="overflow-hidden rounded-2xl border border-[#3A3453] bg-[#13111C]">
+            <div className="border-b border-[#3A3453] bg-[#211D32] px-4 py-3 text-xs font-bold text-white/75">
               {weekIndex === 0 ? 'This plan' : `Week ${weekIndex + 1}`} · {days[0].toLocaleDateString('en-SG', { day: 'numeric', month: 'short', timeZone: 'UTC' })}–{days[6].toLocaleDateString('en-SG', { day: 'numeric', month: 'short', timeZone: 'UTC' })}
             </div>
 
             <div className="overflow-x-auto">
-              <div className="grid min-w-[1050px] grid-cols-[72px_repeat(7,minmax(135px,1fr))]">
-                <div className="sticky left-0 top-0 z-50 flex items-center justify-center border-b border-r border-[#3A3453] bg-[#211D32] px-2 py-2 text-[0.65rem] font-bold uppercase tracking-wide text-white/45">
-                  Time
+              <div className="min-w-[1080px]">
+                <div className="grid grid-cols-[92px_repeat(7,minmax(140px,1fr))]">
+                  <div className="sticky left-0 z-30 flex items-center border-b border-r border-[#3A3453] bg-[#211D32] px-3 py-3 text-[0.65rem] font-bold uppercase tracking-wide text-white/45">
+                    Time
+                  </div>
+                  {days.map((day) => (
+                    <div key={`header-${dateKey(day)}`} className="border-b border-r border-[#3A3453] bg-[#191624] px-2 py-2.5 text-center last:border-r-0">
+                      <p className="text-[0.65rem] font-bold uppercase tracking-wide text-white/45">{day.toLocaleDateString('en-SG', { weekday: 'short', timeZone: 'UTC' })}</p>
+                      <p className="text-sm font-bold text-white">{day.getUTCDate()}</p>
+                    </div>
+                  ))}
                 </div>
-                {days.map((day) => (
-                  <div key={`header-${dateKey(day)}`} className="sticky top-0 z-40 border-b border-r border-[#3A3453] bg-[#191624] px-2 py-2 text-center last:border-r-0">
-                    <p className="text-[0.65rem] font-bold uppercase tracking-wide text-white/45">{day.toLocaleDateString('en-SG', { weekday: 'short', timeZone: 'UTC' })}</p>
-                    <p className="text-sm font-bold text-white">{day.getUTCDate()}</p>
+
+                {rowTimes.map((rowTime) => (
+                  <div key={rowTime} className="grid grid-cols-[92px_repeat(7,minmax(140px,1fr))] border-b border-[#2A263B] last:border-b-0">
+                    <div className="sticky left-0 z-20 border-r border-[#3A3453] bg-[#191624] px-3 py-3 text-right text-[0.65rem] font-semibold text-white/45">
+                      {clockLabel(rowTime)}
+                    </div>
+                    {days.map((day) => {
+                      const dayEvents = (eventsByDay.get(dateKey(day)) || []).filter((event) => event.startMinutes === rowTime);
+                      return (
+                        <div key={`${dateKey(day)}-${rowTime}`} className="min-h-[76px] border-r border-[#2A263B] p-1.5 last:border-r-0">
+                          <div className="space-y-1.5">
+                            {dayEvents.map((event) => (
+                              <div key={event.id} className={`rounded-lg border px-2 py-2 ${eventStyles[event.type]} ${event.status === 'done' ? 'opacity-55' : ''}`}>
+                                <div className="flex items-center gap-1.5 text-[0.58rem] font-bold uppercase tracking-wide opacity-80">
+                                  <EventIcon type={event.type} />
+                                  <span>{event.type === 'break' ? 'Break' : event.type}</span>
+                                  {event.status === 'done' && <span className="ml-auto rounded bg-white/10 px-1 py-0.5 text-[0.48rem]">Done</span>}
+                                  {event.status === 'doing' && <span className="ml-auto rounded bg-white/10 px-1 py-0.5 text-[0.48rem]">Doing</span>}
+                                </div>
+                                <p className="mt-1 break-words text-[0.68rem] font-semibold leading-snug text-white">{event.title}</p>
+                                <p className="mt-1 text-[0.57rem] leading-none opacity-65">
+                                  {clockLabel(event.startMinutes)}–{clockLabel(event.endMinutes)}
+                                  {event.sequence && event.type === 'revision' ? ` · Session ${event.sequence}` : ''}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
-
-                <div className="sticky left-0 z-30 border-r border-[#3A3453] bg-[#191624]" style={{ height: TIMELINE_HEIGHT }}>
-                  {Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, index) => {
-                    const hour = START_HOUR + index;
-                    return (
-                      <span
-                        key={hour}
-                        className="absolute right-2 -translate-y-1/2 text-[0.6rem] font-medium text-white/40"
-                        style={{ top: index * HOUR_HEIGHT }}
-                      >
-                        {clockLabel(hour * 60, false)}
-                      </span>
-                    );
-                  })}
-                </div>
-
-                {days.map((day) => {
-                  const dayBlocks = scheduledDays.get(dateKey(day)) || [];
-                  const breaks = getBreaks(dayBlocks);
-                  const isSchoolDay = day.getUTCDay() >= 1 && day.getUTCDay() <= 5;
-
-                  return (
-                    <div
-                      key={dateKey(day)}
-                      className="relative border-r border-[#3A3453] last:border-r-0"
-                      style={{
-                        height: TIMELINE_HEIGHT,
-                        backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${HOUR_HEIGHT - 1}px, rgba(255,255,255,0.07) ${HOUR_HEIGHT - 1}px, rgba(255,255,255,0.07) ${HOUR_HEIGHT}px)`,
-                      }}
-                    >
-                      {isSchoolDay && (
-                        <div className="absolute left-1.5 right-1.5 z-10 overflow-hidden rounded-lg border border-indigo-400/25 bg-indigo-500/15 p-2 text-indigo-100" style={positionStyle(SCHOOL_START, SCHOOL_END)}>
-                          <div className="flex items-center gap-1 text-[0.6rem] font-bold uppercase tracking-wide text-indigo-200">
-                            <GraduationCap className="h-3 w-3" /> School
-                          </div>
-                          <p className="mt-1 text-[0.62rem] text-indigo-100/65">8:00 AM–3:00 PM</p>
-                        </div>
-                      )}
-
-                      {isSchoolDay && (
-                        <div className="absolute left-3 right-3 z-20 flex items-center rounded-md border border-amber-300/25 bg-[#4A351D] px-1.5 text-[0.56rem] font-semibold text-amber-100" style={positionStyle(12 * 60 + 30, 13 * 60)}>
-                          <span className="flex items-center gap-1"><Coffee className="h-3 w-3" /> Lunch break</span>
-                        </div>
-                      )}
-
-                      {breaks.map((breakBlock) => (
-                        <div
-                          key={`${dateKey(day)}-break-${breakBlock.startMinutes}`}
-                          className="absolute left-2 right-2 z-20 flex items-center justify-center overflow-hidden rounded-sm border border-amber-300/30 bg-[#4A351D] px-1 text-[0.5rem] font-semibold leading-none text-amber-100"
-                          style={positionStyle(breakBlock.startMinutes, breakBlock.endMinutes)}
-                        >
-                          <Coffee className="mr-1 h-2.5 w-2.5 shrink-0" /> {breakBlock.duration} min break
-                        </div>
-                      ))}
-
-                      {dayBlocks.map((block) => {
-                        const isRevision = block.workType === 'revision';
-                        const Icon = isRevision ? BookOpen : ClipboardCheck;
-                        const startMinutes = minutesOfDay(block.start);
-                        const endMinutes = minutesOfDay(block.end);
-                        const duration = Math.max(1, endMinutes - startMinutes);
-                        const isCompact = duration < 35;
-                        return (
-                          <div
-                            key={`${block.start}-${block.title}`}
-                            className={`absolute left-1.5 right-1.5 z-30 overflow-hidden rounded-md border shadow-lg ${isCompact ? 'flex items-center gap-1 px-1.5 py-0.5' : 'p-1.5'} ${isRevision ? 'border-wellness-sky-500/35 bg-[#102333]' : 'border-wellness-sage-500/35 bg-[#1B1747]'}`}
-                            style={positionStyle(startMinutes, endMinutes)}
-                            title={`${block.title} · ${timeLabel(block.start)}–${timeLabel(block.end)}`}
-                          >
-                            {isCompact ? (
-                              <>
-                                <Icon className={`h-2.5 w-2.5 shrink-0 ${isRevision ? 'text-wellness-sky-300' : 'text-wellness-sage-300'}`} />
-                                <p className="min-w-0 truncate text-[0.52rem] font-semibold leading-none text-white">{block.title}</p>
-                              </>
-                            ) : (
-                              <>
-                                <div className={`flex items-center gap-1 text-[0.54rem] font-bold uppercase ${isRevision ? 'text-wellness-sky-300' : 'text-wellness-sage-300'}`}>
-                                  <Icon className="h-3 w-3" /> {isRevision ? 'Revision' : 'Homework'}
-                                </div>
-                                <p className="mt-0.5 truncate text-[0.62rem] font-semibold leading-tight text-white">{block.title}</p>
-                                {duration >= 45 && <p className="mt-0.5 text-[0.52rem] leading-none text-white/55">{timeLabel(block.start)}–{timeLabel(block.end)}</p>}
-                              </>
-                            )}
-                          </div>
-                        );
-                      })}
-
-                      <div className="absolute left-1.5 right-1.5 z-10 overflow-hidden rounded-lg border border-violet-400/25 bg-violet-500/15 p-2 text-violet-100" style={positionStyle(SLEEP_START, END_HOUR * 60)}>
-                        <div className="flex items-center gap-1 text-[0.58rem] font-bold uppercase tracking-wide text-violet-200">
-                          <Moon className="h-3 w-3" /> Recommended sleep
-                        </div>
-                        <p className="mt-0.5 text-[0.56rem] text-violet-100/65">11:00 PM–7:00 AM</p>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             </div>
           </section>

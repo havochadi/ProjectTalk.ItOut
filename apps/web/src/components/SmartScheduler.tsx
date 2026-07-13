@@ -17,6 +17,7 @@ type SchedulerInput = {
 };
 
 type ScheduleBlock = {
+  id?: string;
   taskId: string;
   title: string;
   subject?: string | null;
@@ -27,6 +28,7 @@ type ScheduleBlock = {
   rank: number;
   sequence: number;
   tip: string;
+  scheduleStatus?: 'todo' | 'doing' | 'done';
 };
 
 type ScheduleResult = {
@@ -67,7 +69,9 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [savedSchedule, setSavedSchedule] = useState<ScheduleBlock[]>([]);
-  const scheduledTaskIds = new Set(savedSchedule.map((block) => block.taskId));
+  const scheduledTaskIds = new Set(savedSchedule
+    .filter((block) => block.scheduleStatus !== 'done' && new Date(block.end).getTime() >= Date.now())
+    .map((block) => block.taskId));
   const unscheduledCount = tasks.filter((task) => task.status !== 'done' && !scheduledTaskIds.has(task._id)).length;
 
   useEffect(() => {
@@ -143,6 +147,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
     try {
       await taskAPI.saveSchedule(result.schedule);
       setSavedSchedule(result.schedule);
+      onChanged();
       toast.success('Your weekly timetable has been saved.');
       setResult(null);
     } catch (error: any) {

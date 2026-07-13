@@ -368,6 +368,7 @@ export const taskAPI = {
         end: row.end_at,
         sequence: row.sequence,
         tip: row.tip,
+        scheduleStatus: row.status || 'todo',
       }));
     return { data: { schedule } };
   },
@@ -454,6 +455,21 @@ export const taskAPI = {
       announceScheduleChange();
     }
     return response;
+  },
+
+  async updateScheduleBlockStatus(id: string, status: string): ApiResponse {
+    if (!['todo', 'doing', 'done'].includes(status)) {
+      throw new Error('Invalid schedule status');
+    }
+    const { data, error } = await supabase
+      .from('schedule_blocks')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) fail(error);
+    announceScheduleChange();
+    return { data };
   },
 
   async getStudySuggestions(id: string): ApiResponse {

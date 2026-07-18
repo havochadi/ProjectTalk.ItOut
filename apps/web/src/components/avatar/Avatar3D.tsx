@@ -157,11 +157,11 @@ function ProceduralCritter({ character, isSpeaking }: { character: CharacterDef;
   );
 }
 
-// Some quadrupeds (e.g. a cat/dog viewed broadside) are much longer nose-to-tail than they
-// are tall, so normalizing by height alone left them overflowing the panel horizontally in
-// its narrow portrait aspect. Normalizing by the largest of the three dimensions instead
-// keeps every axis within frame regardless of the model's proportions or orientation.
-const MODEL_TARGET_MAX_DIM = 1.6;
+// Characters are rotated (via `rotationY`) to face the camera rather than showing a side
+// profile, so what actually needs to fit the frame is the *post-rotation* screen extent —
+// height (Y, unaffected by a Y-axis spin) and whichever local axis (X or Z) ends up facing
+// the camera after that spin — not the model's raw, pre-rotation bounding box.
+const MODEL_TARGET_MAX_DIM = 1.8;
 
 /**
  * Third-party models arrive in whatever units/scale their export tool used (Quaternius's
@@ -170,7 +170,7 @@ const MODEL_TARGET_MAX_DIM = 1.6;
  * a scale + centering offset so any model — regardless of source units — fits the same
  * frame the procedural characters use.
  */
-function useAutoFit(object: THREE.Object3D) {
+function useAutoFit(object: THREE.Object3D, rotationY: number) {
   return useMemo(() => {
     object.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(object);
@@ -178,10 +178,13 @@ function useAutoFit(object: THREE.Object3D) {
     box.getSize(size);
     const center = new THREE.Vector3();
     box.getCenter(center);
-    const maxDim = Math.max(size.x, size.y, size.z);
+    // A ±90° spin swaps which local axis (X or Z) faces the camera; 0°/180° don't.
+    const quarterTurns = Math.round(rotationY / (Math.PI / 2));
+    const facingWidth = quarterTurns % 2 !== 0 ? size.z : size.x;
+    const maxDim = Math.max(facingWidth, size.y);
     const scale = maxDim > 0 ? MODEL_TARGET_MAX_DIM / maxDim : 1;
     return { scale, center };
-  }, [object]);
+  }, [object, rotationY]);
 }
 
 /** Shared idle-bob + talk-amplitude motion applied to any loaded model's outer (fitted) group. */
@@ -252,14 +255,16 @@ function GltfCritter({ character, isSpeaking }: { character: CharacterDef; isSpe
   const { scene, animations } = useGLTF(resolveAssetPath(character.modelPath as string));
   const { actions } = useAnimations(animations, modelRef);
   const amplitudeRef = useAmplitudeRef(isSpeaking);
-  const { scale, center } = useAutoFit(scene);
+  const { scale, center } = useAutoFit(scene, character.rotationY || 0);
 
   useIdleTalkAnimation(actions, isSpeaking);
   useModelMotion(groupRef, scale * (character.scale || 1), isSpeaking, amplitudeRef);
 
   return (
     <group ref={groupRef}>
-      <primitive ref={modelRef} object={scene} position={[-center.x, -center.y, -center.z]} />
+      <group rotation={[0, character.rotationY || 0, 0]}>
+        <primitive ref={modelRef} object={scene} position={[-center.x, -center.y, -center.z]} />
+      </group>
     </group>
   );
 }
@@ -271,14 +276,16 @@ function FbxCritter({ character, isSpeaking }: { character: CharacterDef; isSpea
   const fbx = useFBX(resolveAssetPath(character.modelPath as string));
   const { actions } = useAnimations(fbx.animations, modelRef);
   const amplitudeRef = useAmplitudeRef(isSpeaking);
-  const { scale, center } = useAutoFit(fbx);
+  const { scale, center } = useAutoFit(fbx, character.rotationY || 0);
 
   useIdleTalkAnimation(actions, isSpeaking);
   useModelMotion(groupRef, scale * (character.scale || 1), isSpeaking, amplitudeRef);
 
   return (
     <group ref={groupRef}>
-      <primitive ref={modelRef} object={fbx} position={[-center.x, -center.y, -center.z]} />
+      <group rotation={[0, character.rotationY || 0, 0]}>
+        <primitive ref={modelRef} object={fbx} position={[-center.x, -center.y, -center.z]} />
+      </group>
     </group>
   );
 }

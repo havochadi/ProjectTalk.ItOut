@@ -19,6 +19,8 @@ export interface CharacterDef {
   format?: 'fbx' | 'glb';
   /** Optional fine-tune multiplier applied on top of Avatar3D's auto-fit scale (default 1). */
   scale?: number;
+  /** Radians to rotate the model around Y so it faces the camera (source models vary). */
+  rotationY?: number;
 }
 
 // Cat/Dog/Eagle are real CC0 rigged models ("Animal Pack Vol.2" by Quaternius — see
@@ -26,9 +28,9 @@ export interface CharacterDef {
 // procedural rather than shipping an unrigged or wrongly-licensed placeholder.
 export const CHARACTERS: CharacterDef[] = [
   { id: 'fox', name: 'Fox', kind: 'procedural', species: 'fox', color: '#e8823a', accentColor: '#fff4e8' },
-  { id: 'cat', name: 'Cat', kind: 'model', modelPath: 'models/Cat.fbx', format: 'fbx' },
-  { id: 'dog', name: 'Dog', kind: 'model', modelPath: 'models/Dog.fbx', format: 'fbx' },
-  { id: 'eagle', name: 'Eagle', kind: 'model', modelPath: 'models/Eagle.fbx', format: 'fbx' },
+  { id: 'cat', name: 'Cat', kind: 'model', modelPath: 'models/Cat.fbx', format: 'fbx', rotationY: -Math.PI / 2 },
+  { id: 'dog', name: 'Dog', kind: 'model', modelPath: 'models/Dog.fbx', format: 'fbx', rotationY: -Math.PI / 2 },
+  { id: 'eagle', name: 'Eagle', kind: 'model', modelPath: 'models/Eagle.fbx', format: 'fbx', rotationY: 0 },
 ];
 
 export const DEFAULT_CHARACTER_ID = CHARACTERS[0].id;

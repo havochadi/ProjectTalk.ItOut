@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { Mic, MicOff, Send, VolumeX, Heart, Phone, X, Sparkles } from 'lucide-react';
 import { MessageBubble } from '../components/MessageBubble';
 import { AvatarCanvas } from '../components/avatar/AvatarCanvas';
-import { CHARACTERS } from '../components/avatar/characters';
+import { CHARACTERS, getCharacter } from '../components/avatar/characters';
 import { useAuth } from '../contexts/AuthContext';
 import { getPreference, setPreference } from '../store/userPrefs';
 import {
@@ -63,7 +63,10 @@ export const ChatPage: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => {
+    if (messages.length === 0) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [messages]);
 
   useEffect(() => {
     if (messages.length === 0 && !hasCheckedInToday) setShowMoodSelector(true);
@@ -135,7 +138,7 @@ export const ChatPage: React.FC = () => {
 
       if (autoPlayVoice && voiceEnabled) {
         setIsAssistantSpeaking(true);
-        void speak(aiMessage.text)
+        void speak(aiMessage.text, getCharacter(characterId).voiceId)
           .catch(() => undefined)
           .finally(() => setIsAssistantSpeaking(false));
       }
@@ -222,11 +225,14 @@ export const ChatPage: React.FC = () => {
           {/* Chat Header */}
           <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-3 sm:px-6 sm:py-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-wellness-sage-500 shadow-glow">
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-xl shadow-glow"
+                style={{ backgroundColor: getCharacter(characterId).color }}
+              >
                 <Heart className="h-5 w-5 text-white" fill="currentColor" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-text">Your companion</h2>
+                <h2 className="text-base font-bold text-text">{getCharacter(characterId).name}</h2>
                 <p className="text-xs text-muted">Always here to listen</p>
               </div>
             </div>
@@ -333,11 +339,12 @@ export const ChatPage: React.FC = () => {
                 <motion.div
                   animate={{ y: [0, -6, 0] }}
                   transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                  className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-wellness-sage-500 shadow-glow"
+                  className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-glow"
+                  style={{ backgroundColor: getCharacter(characterId).color }}
                 >
                   <Heart className="h-8 w-8 text-white" fill="currentColor" />
                 </motion.div>
-                <h3 className="mb-2 text-lg font-bold text-text">Hi {user?.name}, I'm here</h3>
+                <h3 className="mb-2 text-lg font-bold text-text">Hi {user?.name}, I'm {getCharacter(characterId).name}</h3>
                 <p className="mb-6 text-sm text-muted leading-relaxed">
                   Whether you need to talk, vent, or just take a breath — this space is yours, no judgment.
                 </p>

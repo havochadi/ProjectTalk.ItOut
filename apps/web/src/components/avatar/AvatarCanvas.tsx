@@ -31,6 +31,16 @@ function prefersReducedMotion(): boolean {
 // Computed once: neither WebGL support nor a reduced-motion preference change during a session.
 const supports3DAvatar = detectWebGL() && !prefersReducedMotion()
 
+// Fixed (not random-per-render) so the twinkle field doesn't jump around on every re-render.
+const sparkles = [
+  { top: '12%', left: '18%', size: '5px', duration: '2.6s', delay: '0s' },
+  { top: '22%', left: '78%', size: '3px', duration: '3.1s', delay: '0.4s' },
+  { top: '68%', left: '12%', size: '4px', duration: '2.9s', delay: '1.1s' },
+  { top: '80%', left: '70%', size: '3px', duration: '3.4s', delay: '0.7s' },
+  { top: '38%', left: '90%', size: '3px', duration: '2.4s', delay: '1.6s' },
+  { top: '52%', left: '6%', size: '3px', duration: '3.6s', delay: '0.2s' },
+]
+
 function StaticAvatar({ isSpeaking }: { isSpeaking: boolean }) {
   return (
     <div className={isSpeaking ? 'talkio-avatar talkio-avatar-speaking' : 'talkio-avatar'}>
@@ -57,7 +67,24 @@ export function AvatarCanvas({
       style={style}
       aria-label="Talk.IO companion avatar"
     >
-      <div className="absolute inset-0 bg-black" />
+      <div
+        className="absolute inset-0 transition-[background] duration-700 ease-pleasant"
+        style={{
+          background: `radial-gradient(circle at 28% 18%, ${character.color}45, transparent 55%), radial-gradient(circle at 82% 88%, ${character.accentColor}30, transparent 50%), linear-gradient(160deg, #362a55 0%, #201a35 55%, #14101f 100%)`,
+        }}
+      />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {sparkles.map((s, i) => (
+          <span
+            key={i}
+            className="talkio-sparkle absolute rounded-full bg-white"
+            style={{
+              top: s.top, left: s.left, width: s.size, height: s.size,
+              animationDuration: s.duration, animationDelay: s.delay,
+            }}
+          />
+        ))}
+      </div>
       {supports3DAvatar ? (
         <Suspense fallback={<StaticAvatar isSpeaking={isSpeaking} />}>
           <div className="relative z-[1] h-full w-full">
@@ -122,6 +149,15 @@ export function AvatarCanvas({
           0%, 100% { transform: translateX(0) rotate(0deg); }
           25% { transform: translateX(-2px) rotate(-0.8deg); }
           75% { transform: translateX(2px) rotate(0.8deg); }
+        }
+
+        .talkio-sparkle {
+          animation: talkio-twinkle 3s ease-in-out infinite;
+        }
+
+        @keyframes talkio-twinkle {
+          0%, 100% { opacity: 0.2; transform: scale(0.8); }
+          50% { opacity: 1; transform: scale(1.15); }
         }
       `}</style>
     </div>

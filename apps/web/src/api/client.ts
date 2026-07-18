@@ -1157,11 +1157,32 @@ export const voiceAPI = {
   },
 
   async textToSpeech(text: string, voiceId: string): ApiResponse {
-    const { data, error } = await supabase.functions.invoke('voice', {
-      body: { text, voiceId },
-      headers: { 'x-talkitout-action': 'tts' },
+    // supabase.functions.invoke() garbles this response: the streamed audio/mpeg body (no
+    // Content-Length, since ElevenLabs sends it chunked) comes back corrupted, producing a
+    // blob the browser's Audio element refuses to play ("NotSupportedError: Failed to load
+    // because no supported source was found") even though the raw bytes on the wire are a
+    // valid MP3. A direct fetch with arrayBuffer() reads the binary body correctly.
+    requireSupabaseConfig();
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) fail(sessionError);
+    const token = sessionData.session?.access_token;
+    if (!token) fail(new Error('You must be signed in'));
+
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/voice`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        'x-talkitout-action': 'tts',
+      },
+      body: JSON.stringify({ text, voiceId }),
     });
-    if (error) fail(error);
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({} as any));
+      fail(new Error(body.error || `Text-to-speech request failed (${response.status})`));
+    }
+    const data = await response.arrayBuffer();
     return { data };
   },
 

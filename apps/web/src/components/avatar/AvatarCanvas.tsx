@@ -31,15 +31,39 @@ function prefersReducedMotion(): boolean {
 // Computed once: neither WebGL support nor a reduced-motion preference change during a session.
 const supports3DAvatar = detectWebGL() && !prefersReducedMotion()
 
-// Fixed (not random-per-render) so the twinkle field doesn't jump around on every re-render.
-const sparkles = [
-  { top: '12%', left: '18%', size: '5px', duration: '2.6s', delay: '0s' },
-  { top: '22%', left: '78%', size: '3px', duration: '3.1s', delay: '0.4s' },
-  { top: '68%', left: '12%', size: '4px', duration: '2.9s', delay: '1.1s' },
-  { top: '80%', left: '70%', size: '3px', duration: '3.4s', delay: '0.7s' },
-  { top: '38%', left: '90%', size: '3px', duration: '2.4s', delay: '1.6s' },
-  { top: '52%', left: '6%', size: '3px', duration: '3.6s', delay: '0.2s' },
+// Fixed (not random-per-render) so the firefly field doesn't jump around on every re-render.
+const fireflies = [
+  { top: '30%', left: '14%', size: '5px', duration: '3.2s', delay: '0s' },
+  { top: '46%', left: '82%', size: '4px', duration: '3.8s', delay: '0.5s' },
+  { top: '62%', left: '22%', size: '3px', duration: '2.9s', delay: '1.2s' },
+  { top: '58%', left: '68%', size: '4px', duration: '3.4s', delay: '0.8s' },
+  { top: '40%', left: '48%', size: '3px', duration: '4.1s', delay: '1.6s' },
 ]
+
+// Back-row (further, smaller, darker) and front-row (closer, bigger, lighter) pine trees —
+// pure-CSS triangles so the forest scene needs no image assets.
+const backTrees = [
+  { left: '4%', scale: 0.62, hue: '#1f5c3c' },
+  { left: '20%', scale: 0.5, hue: '#1a4f34' },
+  { left: '78%', scale: 0.56, hue: '#1f5c3c' },
+  { left: '92%', scale: 0.46, hue: '#1a4f34' },
+]
+const frontTrees = [
+  { left: '-2%', scale: 0.95, hue: '#2d7a48' },
+  { left: '10%', scale: 0.78, hue: '#25683d' },
+  { left: '86%', scale: 0.9, hue: '#2d7a48' },
+  { left: '98%', scale: 0.7, hue: '#25683d' },
+]
+
+function PineTree({ left, scale, hue }: { left: string; scale: number; hue: string }) {
+  return (
+    <div className="absolute bottom-[16%]" style={{ left, transform: `scale(${scale})`, transformOrigin: 'bottom center' }}>
+      <div style={{ width: 0, height: 0, borderLeft: '17px solid transparent', borderRight: '17px solid transparent', borderBottom: `30px solid ${hue}` }} />
+      <div style={{ width: 0, height: 0, borderLeft: '13px solid transparent', borderRight: '13px solid transparent', borderBottom: `26px solid ${hue}`, marginTop: '-13px' }} />
+      <div style={{ width: '6px', height: '12px', background: '#5b3a24', margin: '0 auto' }} />
+    </div>
+  )
+}
 
 function StaticAvatar({ isSpeaking }: { isSpeaking: boolean }) {
   return (
@@ -67,19 +91,32 @@ export function AvatarCanvas({
       style={style}
       aria-label="Talk.IO companion avatar"
     >
+      {/* Forest sky-to-grass gradient, tinted with the companion's own color for personalization */}
       <div
         className="absolute inset-0 transition-[background] duration-700 ease-pleasant"
         style={{
-          background: `radial-gradient(circle at 28% 18%, ${character.color}45, transparent 55%), radial-gradient(circle at 82% 88%, ${character.accentColor}30, transparent 50%), linear-gradient(160deg, #362a55 0%, #201a35 55%, #14101f 100%)`,
+          background: `radial-gradient(circle at 50% 30%, ${character.color}30, transparent 55%), linear-gradient(180deg, #bfe6cb 0%, #8fd0a3 20%, #5fb87e 42%, #3c8f5c 66%, #245c3c 100%)`,
         }}
       />
+      {/* Soft sunlight glow */}
+      <div
+        className="pointer-events-none absolute rounded-full blur-2xl"
+        style={{ top: '7%', right: '14%', width: '4.5rem', height: '4.5rem', background: 'radial-gradient(circle, rgba(255,250,220,0.85), transparent 70%)' }}
+      />
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {sparkles.map((s, i) => (
+        {backTrees.map((t, i) => <PineTree key={`back-${i}`} {...t} />)}
+        {frontTrees.map((t, i) => <PineTree key={`front-${i}`} {...t} />)}
+        <div
+          className="absolute inset-x-0 bottom-0 h-[16%]"
+          style={{ background: 'linear-gradient(180deg, #2d7a48 0%, #1c4a2f 100%)' }}
+        />
+        {fireflies.map((s, i) => (
           <span
             key={i}
-            className="talkio-sparkle absolute rounded-full bg-white"
+            className="talkio-sparkle absolute rounded-full bg-amber-200"
             style={{
               top: s.top, left: s.left, width: s.size, height: s.size,
+              boxShadow: '0 0 6px 2px rgba(253, 224, 71, 0.8)',
               animationDuration: s.duration, animationDelay: s.delay,
             }}
           />

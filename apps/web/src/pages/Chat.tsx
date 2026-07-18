@@ -373,6 +373,7 @@ export const ChatPage: React.FC = () => {
                   index={idx}
                   autoPlay={false}
                   onSpeechStateChange={setIsAssistantSpeaking}
+                  voiceId={getCharacter(characterId).voiceId}
                 />
               ))}
             </AnimatePresence>

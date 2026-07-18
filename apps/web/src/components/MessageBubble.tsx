@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { formatRelativeTime } from '@talkitout/ui';
 import { Link } from 'react-router-dom';
 import { Volume2, VolumeX, Loader2, Heart, ArrowRight, CheckSquare, Timer } from 'lucide-react';
-import { speakWithBrowser } from '../lib/voiceClient';
+import { speak, speakWithBrowser, isVoiceEnabled, stopAllSpeech } from '../lib/voiceClient';
 import toast from 'react-hot-toast';
 
 interface Message {
@@ -27,6 +27,9 @@ interface MessageBubbleProps {
   index: number;
   autoPlay?: boolean;
   onSpeechStateChange?: (isSpeaking: boolean) => void;
+  /** ElevenLabs voice ID for the currently-selected companion; falls back to the browser's
+   * built-in voice when voice isn't configured (see `isVoiceEnabled`). */
+  voiceId?: string;
 }
 
 const sentimentConfig: Record<string, { label: string; color: string; bg: string }> = {
@@ -36,7 +39,7 @@ const sentimentConfig: Record<string, { label: string; color: string; bg: string
 };
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
-  message, index: _index, autoPlay, onSpeechStateChange,
+  message, index: _index, autoPlay, onSpeechStateChange, voiceId,
 }) => {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isSpeakingThis, setIsSpeakingThis] = useState(false);
@@ -47,7 +50,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   const handleSpeak = async () => {
     if (isSpeakingThis) {
-      window.speechSynthesis.cancel();
+      stopAllSpeech();
       setIsSpeakingThis(false);
       setIsPlayingAudio(false);
       notifySpeechState(false);
@@ -57,7 +60,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     setIsSpeakingThis(true);
     notifySpeechState(true);
     try {
-      await speakWithBrowser(message.text);
+      // Use the companion's own ElevenLabs voice when voice is configured; otherwise
+      // fall back to the browser's built-in TTS (which can't be given a per-character voice).
+      if (isVoiceEnabled()) {
+        await speak(message.text, voiceId);
+      } else {
+        await speakWithBrowser(message.text);
+      }
     } catch (error: any) {
       toast.error(error?.message || 'Unable to play audio right now.', { duration: 4000 });
     } finally {

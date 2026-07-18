@@ -24,7 +24,7 @@ const quickActions = [
     label: 'Talk to companion',
     sub: 'Share how you feel',
     icon: MessageCircle,
-    cardBg: 'bg-[#C8C4F8]',
+    cardBg: 'bg-[#DCCBFF]',
     iconBg: 'bg-wellness-sage-600/20',
     iconColor: 'text-wellness-sage-800',
     textColor: 'text-wellness-sage-900',
@@ -34,7 +34,7 @@ const quickActions = [
     label: 'Log your mood',
     sub: 'Track your wellbeing',
     icon: Smile,
-    cardBg: 'bg-[#F0C4D4]',
+    cardBg: 'bg-[#FBC7DE]',
     iconBg: 'bg-pink-600/15',
     iconColor: 'text-pink-800',
     textColor: 'text-pink-900',
@@ -44,7 +44,7 @@ const quickActions = [
     label: 'Focus session',
     sub: 'Pomodoro timer',
     icon: Timer,
-    cardBg: 'bg-[#C4DCF4]',
+    cardBg: 'bg-[#BEE7FF]',
     iconBg: 'bg-sky-600/15',
     iconColor: 'text-sky-800',
     textColor: 'text-sky-900',
@@ -54,7 +54,7 @@ const quickActions = [
     label: 'Your to-dos',
     sub: 'Manage your tasks',
     icon: CheckSquare,
-    cardBg: 'bg-[#C8F0D0]',
+    cardBg: 'bg-[#BFF0CE]',
     iconBg: 'bg-green-600/15',
     iconColor: 'text-green-800',
     textColor: 'text-green-900',
@@ -109,11 +109,11 @@ export const DashboardPage: React.FC = () => {
         initial={{ opacity: 0, y: 28 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="relative overflow-hidden rounded-3xl bg-[#13111C] px-5 py-7 text-white sm:px-8 sm:py-10"
+        className="relative overflow-hidden rounded-3xl bg-panel-bg px-5 py-7 text-white sm:px-8 sm:py-10"
       >
         {/* Background decoration */}
         <div className="absolute -right-16 -top-16 h-72 w-72 rounded-full bg-wellness-sage-600/30 blur-3xl" />
-        <div className="absolute -bottom-12 left-1/3 h-56 w-56 rounded-full bg-[#E86FA0]/15 blur-3xl" />
+        <div className="absolute -bottom-12 left-1/3 h-56 w-56 rounded-full bg-[var(--accent-pink)]/15 blur-3xl" />
 
         <div className="relative z-10">
           <p className="text-xs font-semibold text-white/50 uppercase tracking-widest">
@@ -129,7 +129,7 @@ export const DashboardPage: React.FC = () => {
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               to="/app/chat"
-              className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#13111C] shadow-sm transition hover:bg-wellness-sage-50"
+              className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[var(--primary-dark)] shadow-sm transition hover:bg-wellness-sage-50"
             >
               Start talking <ArrowRight className="h-4 w-4" />
             </Link>

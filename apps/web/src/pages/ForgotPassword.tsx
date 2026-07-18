@@ -73,7 +73,7 @@ export const ForgotPasswordPage: React.FC = () => {
                   required
                 />
               </div>
-              <Button type="submit" isLoading={isLoading} className="w-full rounded-full bg-[#13111C] py-3 font-semibold text-white hover:bg-wellness-sage-700">
+              <Button type="submit" isLoading={isLoading} className="w-full rounded-full bg-gradient-sunset py-3 font-semibold text-white hover:brightness-110 hover:saturate-110">
                 Send reset link
               </Button>
             </form>

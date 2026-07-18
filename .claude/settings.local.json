@@ -34,7 +34,11 @@
       "Bash(cygpath -w \"/c/Users/User/OneDrive/Desktop/ProjectTalk\")",
       "Bash(cygpath -w \"/c/Users/User/OneDrive/Documents/GitHub/ProjectTalk.ItOut\")",
       "Bash(robocopy 'C:\\\\Users\\\\User\\\\OneDrive\\\\Desktop\\\\ProjectTalk' 'C:\\\\Users\\\\User\\\\OneDrive\\\\Documents\\\\GitHub\\\\ProjectTalk.ItOut' /E /XD node_modules dist build coverage .git mongo-data .next /XF *.log /NFL /NDL /NJH /MT:8)",
-      "Bash(echo \"ROBOCOPY_EXIT=$?\")"
+      "Bash(echo \"ROBOCOPY_EXIT=$?\")",
+      "Bash(python \"C:/Users/User/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.11.0/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"student mental health wellness app vibrant playful youth Gen-Z energetic trustworthy\" --design-system -p \"TalkItOut\" --variance 7 --motion 6 --density 5)",
+      "Bash(python \"C:/Users/User/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.11.0/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"vibrant playful youth gen-z energetic optimistic\" --domain color -n 6)",
+      "Bash(python \"C:/Users/User/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.11.0/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"playful rounded friendly youthful modern\" --domain typography -n 6)",
+      "Bash(python \"C:/Users/User/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.11.0/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"playful vibrant gradient youth app\" --domain style -n 6)"
     ],
     "deny": [],
     "ask": []

@@ -33,7 +33,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <p className="mt-1.5 text-sm text-red-600">{error}</p>
         )}
         {helperText && !error && (
-          <p className="mt-1.5 text-sm text-ti-text-tertiary">{helperText}</p>
+          <p className="mt-1.5 text-sm text-[var(--muted)]">{helperText}</p>
         )}
       </div>
     );
@@ -74,7 +74,7 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
           <p className="mt-1.5 text-sm text-red-600">{error}</p>
         )}
         {helperText && !error && (
-          <p className="mt-1.5 text-sm text-ti-text-tertiary">{helperText}</p>
+          <p className="mt-1.5 text-sm text-[var(--muted)]">{helperText}</p>
         )}
       </div>
     );

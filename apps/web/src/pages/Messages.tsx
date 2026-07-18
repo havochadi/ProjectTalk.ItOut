@@ -312,7 +312,7 @@ export const MessagesPage: React.FC = () => {
                         onClick={handleSendReply}
                         disabled={!replyText.trim() || isSendingReply}
                         isLoading={isSendingReply}
-                        className="bg-[#13111C] text-white rounded-full px-6 hover:bg-wellness-sage-700"
+                        className="bg-gradient-sunset text-white rounded-full px-6 hover:brightness-110 hover:saturate-110"
                       >
                         <Send className="w-4 h-4 mr-2" />
                         Send Reply

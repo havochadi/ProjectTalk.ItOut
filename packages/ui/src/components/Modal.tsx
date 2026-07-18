@@ -56,18 +56,18 @@ export const Modal: React.FC<ModalProps> = ({
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2 }}
               className={cn(
-                'relative w-full bg-ti-surface rounded-xl shadow-xl border border-ti-border',
+                'relative w-full bg-[var(--surface)] rounded-3xl shadow-xl border border-[var(--border)]',
                 sizes[size]
               )}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
               {title && (
-                <div className="flex items-center justify-between p-6 border-b border-ti-border">
-                  <h2 className="text-xl font-semibold text-ti-text-primary">{title}</h2>
+                <div className="flex items-center justify-between p-6 border-b border-[var(--border)]">
+                  <h2 className="text-xl font-bold font-display text-[var(--text)]">{title}</h2>
                   <button
                     onClick={onClose}
-                    className="text-ti-text-tertiary hover:text-ti-text-primary transition-colors"
+                    className="text-[var(--muted)] hover:text-[var(--text)] transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

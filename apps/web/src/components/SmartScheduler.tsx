@@ -25,7 +25,7 @@ type ScheduleResult = {
   tips: string[];
 };
 
-const fieldClass = 'w-full min-h-11 rounded-xl border border-[#3A3453] bg-[#13111C] px-3 py-2.5 text-sm text-white [color-scheme:dark] placeholder:text-white/40 focus:border-wellness-sage-400 focus:outline-none focus:ring-1 focus:ring-wellness-sage-400';
+const fieldClass = 'w-full min-h-11 rounded-xl border border-panel-border bg-panel-bg px-3 py-2.5 text-sm text-white [color-scheme:dark] placeholder:text-white/40 focus:border-wellness-sage-400 focus:outline-none focus:ring-1 focus:ring-wellness-sage-400';
 const weekDays = [
   { key: 'mon', label: 'Mon' }, { key: 'tue', label: 'Tue' }, { key: 'wed', label: 'Wed' },
   { key: 'thu', label: 'Thu' }, { key: 'fri', label: 'Fri' }, { key: 'sat', label: 'Sat' },
@@ -197,11 +197,11 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
 
   return (
     <>
-    <section className="overflow-hidden rounded-2xl border border-[#3A3453] bg-[#191624] shadow-card">
+    <section className="overflow-hidden rounded-2xl border border-panel-border bg-panel-surface shadow-card">
       <button
         type="button"
         onClick={() => setIsOpen((value) => !value)}
-        className="flex min-h-16 w-full items-center gap-3 bg-[#211D32] px-4 py-3 text-left text-white sm:px-5"
+        className="flex min-h-16 w-full items-center gap-3 bg-panel-surface px-4 py-3 text-left text-white sm:px-5"
         aria-expanded={isOpen}
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-wellness-sage-500 text-white shadow-glow">
@@ -222,7 +222,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="space-y-5 border-t border-[#3A3453] bg-[#191624] p-4 text-white sm:p-5">
+            <div className="space-y-5 border-t border-panel-border bg-panel-surface p-4 text-white sm:p-5">
               <div>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -242,7 +242,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
 
                 <div className="space-y-3">
                   {items.map((item, index) => (
-                    <div key={item.id} className="rounded-xl border border-[#3A3453] bg-[#211D32] p-3 sm:p-4">
+                    <div key={item.id} className="rounded-xl border border-panel-border bg-panel-surface p-3 sm:p-4">
                       <div className="mb-3 flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-wide text-white/55">Item {index + 1}</span>
                         {items.length > 1 && (
@@ -271,7 +271,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
                         <label>
                           <span className="mb-1 block text-xs font-semibold text-white/80">{item.workType === 'revision' ? 'Deadline' : 'Due date'}</span>
                           {item.workType === 'revision' ? (
-                            <div className="flex min-h-11 items-center rounded-xl border border-[#3A3453] bg-[#191624] px-3 text-xs text-white/45">Flexible — none needed</div>
+                            <div className="flex min-h-11 items-center rounded-xl border border-panel-border bg-panel-surface px-3 text-xs text-white/45">Flexible — none needed</div>
                           ) : (
                             <input type="date" className={fieldClass} value={item.deadline} onChange={(event) => updateItem(item.id, 'deadline', event.target.value)} />
                           )}
@@ -295,14 +295,14 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[#3A3453] bg-[#211D32] p-3 sm:p-4">
+              <div className="rounded-xl border border-panel-border bg-panel-surface p-3 sm:p-4">
                 <h2 className="text-sm font-bold text-white">What time do you want to start?</h2>
                 <p className="mb-3 mt-1 text-xs text-white/55">Choose study days and when you normally begin. Keep at least one free day.</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
                   {weekDays.map((day) => {
                     const isStudyDay = Boolean(preferences.weeklyStartTimes[day.key]);
                     return (
-                      <div key={day.key} className={`rounded-xl border p-2.5 transition ${isStudyDay ? 'border-wellness-sage-500/40 bg-[#191624]' : 'border-[#3A3453] bg-[#191624]/60'}`}>
+                      <div key={day.key} className={`rounded-xl border p-2.5 transition ${isStudyDay ? 'border-wellness-sage-500/40 bg-panel-surface' : 'border-panel-border bg-panel-surface/60'}`}>
                         <button
                           type="button"
                           onClick={() => setPreferences((current) => ({
@@ -355,7 +355,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
                     <p className="text-sm font-bold text-white">Timetable deleted</p>
                     <p className="text-xs text-white/55">Your tasks are safe. Restore the most recent deletion if it was a mistake.</p>
                   </div>
-                  <button type="button" onClick={undoDelete} disabled={isRestoring} className="flex min-h-10 items-center gap-2 rounded-xl border border-wellness-sage-400/40 bg-[#211D32] px-3 text-xs font-bold text-white hover:bg-[#2A2540] disabled:opacity-60">
+                  <button type="button" onClick={undoDelete} disabled={isRestoring} className="flex min-h-10 items-center gap-2 rounded-xl border border-wellness-sage-400/40 bg-panel-surface px-3 text-xs font-bold text-white hover:bg-panel-alt disabled:opacity-60">
                     {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}
                     {isRestoring ? 'Restoring…' : 'Undo delete'}
                   </button>
@@ -363,7 +363,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
               )}
 
               {!result && savedSchedule.length > 0 && (
-                <div className="space-y-3 border-t border-[#3A3453] pt-5">
+                <div className="space-y-3 border-t border-panel-border pt-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold uppercase tracking-wide text-wellness-sage-300">Saved timetable</p>
@@ -398,14 +398,14 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
               )}
 
               {result && (
-                <div className="space-y-5 border-t border-[#3A3453] pt-5">
+                <div className="space-y-5 border-t border-panel-border pt-5">
                   <div>
                     <h2 className="text-base font-bold text-white">Your suggested plan</h2>
                     <p className="mt-1 text-sm text-white/60">{result.overview}</p>
                   </div>
 
                   <div className="grid gap-4 lg:grid-cols-2">
-                    <div className="rounded-xl border border-[#3A3453] bg-[#211D32] p-4">
+                    <div className="rounded-xl border border-panel-border bg-panel-surface p-4">
                       <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-white/55">Priority ranking</h3>
                       <ol className="space-y-3">
                         {result.rankedItems.map((item) => (
@@ -420,7 +420,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
                       </ol>
                     </div>
 
-                    <div className="rounded-xl border border-[#3A3453] bg-[#211D32] p-4">
+                    <div className="rounded-xl border border-panel-border bg-panel-surface p-4">
                       <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-white/55">Helpful tips</h3>
                       <ul className="space-y-2">
                         {result.tips.map((tip) => (
@@ -442,7 +442,7 @@ export const SmartScheduler: React.FC<{ tasks: any[]; onChanged: () => void }> =
                     type="button"
                     onClick={saveTimetable}
                     disabled={isCreating}
-                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#13111C] px-5 text-sm font-bold text-white hover:bg-wellness-sage-800 disabled:opacity-60 sm:w-auto"
+                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-sunset px-5 text-sm font-bold text-white hover:brightness-110 hover:saturate-110 disabled:opacity-60 sm:w-auto"
                   >
                     {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
                     {isCreating ? 'Saving timetable…' : 'Save this timetable'}

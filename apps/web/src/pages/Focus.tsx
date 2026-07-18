@@ -9,9 +9,9 @@ import { Timer, Coffee, Zap, Wind, BookOpen, Leaf } from 'lucide-react';
 import { GuidedExerciseModal } from '../components/GuidedExerciseModal';
 
 const phaseConfig = {
-  focus:     { label: 'Focus time',   icon: Zap,    color: 'bg-wellness-sage-500',     ring: '#7B6CF6', emoji: '🎯' },
-  break:     { label: 'Short break',  icon: Coffee,  color: 'bg-wellness-sky-500',      ring: '#6BA3C4', emoji: '☕' },
-  longBreak: { label: 'Long break',   icon: Leaf,    color: 'bg-wellness-lavender-500', ring: '#B06FAD', emoji: '🌿' },
+  focus:     { label: 'Focus time',   icon: Zap,    color: 'bg-wellness-sage-500',     ring: '#7C3AED', emoji: '🎯' },
+  break:     { label: 'Short break',  icon: Coffee,  color: 'bg-wellness-sky-500',      ring: '#38BDF8', emoji: '☕' },
+  longBreak: { label: 'Long break',   icon: Leaf,    color: 'bg-wellness-lavender-500', ring: '#EC4899', emoji: '🌿' },
 };
 
 const mindfulActivities = [
@@ -183,7 +183,7 @@ export const FocusPage: React.FC = () => {
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.96 }}
                   onClick={handleStart}
-                  className="flex items-center gap-2 rounded-full bg-[#13111C] px-8 py-3 font-bold text-white transition hover:bg-wellness-sage-700"
+                  className="flex items-center gap-2 rounded-full bg-gradient-sunset px-8 py-3 font-bold text-white transition hover:brightness-110 hover:saturate-110"
                 >
                   <Timer className="h-5 w-5" />
                   Start session

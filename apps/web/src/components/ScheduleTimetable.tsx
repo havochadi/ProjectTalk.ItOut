@@ -90,11 +90,11 @@ const getBreakEvents = (blocks: ScheduleBlock[], day: string): TimetableEvent[] 
 };
 
 const eventStyles: Record<TimetableEvent['type'], string> = {
-  homework: 'border-[#584DAD] bg-[#211A57] text-[#DCD8FF]',
-  revision: 'border-[#386B83] bg-[#122735] text-[#C7EBFF]',
-  school: 'border-[#4B4B83] bg-[#20203E] text-[#D7D8FF]',
-  break: 'border-[#89651F] bg-[#3A2B16] text-[#FFE1A0]',
-  sleep: 'border-[#5B4E82] bg-[#28213D] text-[#DDD2FF]',
+  homework: 'border-[#8B5CF6] bg-[#241A3D] text-[#EDE4FF]',
+  revision: 'border-[#38BDF8] bg-[#0F2436] text-[#DFF4FF]',
+  school: 'border-[#6366F1] bg-[#1E1B4B] text-[#E3E1FF]',
+  break: 'border-[#FB923C] bg-[#3A2412] text-[#FFEBD6]',
+  sleep: 'border-[#A78BFA] bg-[#241A3D] text-[#F1EBFF]',
 };
 
 const EventIcon = ({ type, compact = false }: { type: TimetableEvent['type']; compact?: boolean }) => {
@@ -115,13 +115,13 @@ const TimetableCard = ({ event, layer = 20, onEdit }: { event: TimetableEvent; l
   if (event.type === 'break' && duration <= 10) {
     return (
       <div
-        className="absolute left-2 right-2 flex items-center gap-1 text-[#E7B84D]"
+        className="absolute left-2 right-2 flex items-center gap-1 text-[#FDBA74]"
         style={{ ...positionStyle(event), zIndex: layer }}
         title={`${event.title} · ${timeRange}`}
       >
-        <span className="h-px min-w-0 flex-1 border-t border-dashed border-[#B7862C]" />
+        <span className="h-px min-w-0 flex-1 border-t border-dashed border-[#FB923C]" />
         <span className="shrink-0 text-[0.46rem] font-bold leading-none">{duration}m reset</span>
-        <span className="h-px min-w-0 flex-1 border-t border-dashed border-[#B7862C]" />
+        <span className="h-px min-w-0 flex-1 border-t border-dashed border-[#FB923C]" />
       </div>
     );
   }
@@ -192,11 +192,11 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[]; onEditBlock?
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-x-4 gap-y-2 text-[0.65rem] font-semibold text-white/55">
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#6F61CF]" /> Homework</span>
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#4C88A7]" /> Revision</span>
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#6868A7]" /> School</span>
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#B48324]" /> Break</span>
-        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#7766A8]" /> Sleep</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#8B5CF6]" /> Homework</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#38BDF8]" /> Revision</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#6366F1]" /> School</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#FB923C]" /> Break</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#A78BFA]" /> Sleep</span>
       </div>
       <p className="text-xs text-white/45">Times follow the vertical scale. {onEditBlock ? 'Select a homework or revision block to edit it. ' : ''}Scroll down for later sessions<span className="sm:hidden"> and sideways for the full week</span>.</p>
 
@@ -209,19 +209,19 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[]; onEditBlock?
         });
 
         return (
-          <section key={weekKey} className="overflow-hidden rounded-2xl border border-[#3A3453] bg-[#13111C]">
-            <div className="border-b border-[#3A3453] bg-[#211D32] px-4 py-3 text-xs font-bold text-white/75">
+          <section key={weekKey} className="overflow-hidden rounded-2xl border border-panel-border bg-panel-bg">
+            <div className="border-b border-panel-border bg-panel-surface px-4 py-3 text-xs font-bold text-white/75">
               {weekIndex === 0 ? 'This plan' : `Week ${weekIndex + 1}`} · {days[0].toLocaleDateString('en-SG', { day: 'numeric', month: 'short', timeZone: 'UTC' })}–{days[6].toLocaleDateString('en-SG', { day: 'numeric', month: 'short', timeZone: 'UTC' })}
             </div>
 
             <div className="max-h-[72dvh] overflow-auto">
               <div className="min-w-[1260px]">
                 <div className="sticky top-0 z-50 grid grid-cols-[100px_repeat(7,minmax(165px,1fr))]">
-                  <div className="sticky left-0 z-50 flex items-center border-b border-r border-[#3A3453] bg-[#211D32] px-3 py-3 text-[0.65rem] font-bold uppercase tracking-wide text-white/45">
+                  <div className="sticky left-0 z-50 flex items-center border-b border-r border-panel-border bg-panel-surface px-3 py-3 text-[0.65rem] font-bold uppercase tracking-wide text-white/45">
                     Time
                   </div>
                   {days.map((day) => (
-                    <div key={`header-${dateKey(day)}`} className="border-b border-r border-[#3A3453] bg-[#191624] px-2 py-2.5 text-center last:border-r-0">
+                    <div key={`header-${dateKey(day)}`} className="border-b border-r border-panel-border bg-panel-surface px-2 py-2.5 text-center last:border-r-0">
                       <p className="text-[0.65rem] font-bold uppercase tracking-wide text-white/45">{day.toLocaleDateString('en-SG', { weekday: 'short', timeZone: 'UTC' })}</p>
                       <p className="text-sm font-bold text-white">{day.getUTCDate()}</p>
                     </div>
@@ -229,7 +229,7 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[]; onEditBlock?
                 </div>
 
                 <div className="grid grid-cols-[100px_repeat(7,minmax(165px,1fr))]">
-                  <div className="sticky left-0 z-40 border-r border-[#3A3453] bg-[#191624]" style={{ height: TIMELINE_HEIGHT }}>
+                  <div className="sticky left-0 z-40 border-r border-panel-border bg-panel-surface" style={{ height: TIMELINE_HEIGHT }}>
                     {Array.from({ length: Math.floor((END_MINUTES - START_MINUTES) / 30) + 1 }, (_, index) => {
                       const minutes = START_MINUTES + index * 30;
                       return (
@@ -262,7 +262,7 @@ export const ScheduleTimetable: React.FC<{ blocks: ScheduleBlock[]; onEditBlock?
                     return (
                       <div
                         key={dayKey}
-                        className="relative border-r border-[#3A3453] last:border-r-0"
+                        className="relative border-r border-panel-border last:border-r-0"
                         style={{
                           height: TIMELINE_HEIGHT,
                           backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${QUARTER_HOUR_HEIGHT - 1}px, rgba(255,255,255,0.035) ${QUARTER_HOUR_HEIGHT - 1}px, rgba(255,255,255,0.035) ${QUARTER_HOUR_HEIGHT}px), repeating-linear-gradient(to bottom, transparent 0, transparent ${HOUR_HEIGHT - 1}px, rgba(255,255,255,0.1) ${HOUR_HEIGHT - 1}px, rgba(255,255,255,0.1) ${HOUR_HEIGHT}px)`,

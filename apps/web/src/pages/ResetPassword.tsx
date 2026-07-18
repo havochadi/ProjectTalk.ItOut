@@ -68,7 +68,7 @@ export const ResetPasswordPage: React.FC = () => {
             </div>
             <h1 className="text-2xl font-bold">Password updated</h1>
             <p className="mt-3 text-sm text-muted">You can now sign in using your new password.</p>
-            <Button onClick={goToLogin} className="mt-6 w-full rounded-full bg-[#13111C] py-3 font-semibold text-white hover:bg-wellness-sage-700">
+            <Button onClick={goToLogin} className="mt-6 w-full rounded-full bg-gradient-sunset py-3 font-semibold text-white hover:brightness-110 hover:saturate-110">
               Return to sign in
             </Button>
           </div>
@@ -88,7 +88,7 @@ export const ResetPasswordPage: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               <Input label="New password" type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} minLength={8} required />
               <Input label="Confirm new password" type="password" value={confirmation} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setConfirmation(event.target.value)} minLength={8} required />
-              <Button type="submit" isLoading={isLoading} className="w-full rounded-full bg-[#13111C] py-3 font-semibold text-white hover:bg-wellness-sage-700">
+              <Button type="submit" isLoading={isLoading} className="w-full rounded-full bg-gradient-sunset py-3 font-semibold text-white hover:brightness-110 hover:saturate-110">
                 Update password
               </Button>
             </form>

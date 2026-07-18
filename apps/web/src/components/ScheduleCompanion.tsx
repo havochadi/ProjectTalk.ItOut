@@ -122,7 +122,7 @@ export const ScheduleCompanion: React.FC = () => {
             initial={{ opacity: 0, y: -16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
-            className="fixed left-3 right-3 top-[4.75rem] z-30 mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border border-wellness-sage-400/40 bg-[#211D32] p-3 text-white shadow-2xl sm:left-auto sm:right-5 sm:max-w-md"
+            className="fixed left-3 right-3 top-[4.75rem] z-30 mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border border-wellness-sage-400/40 bg-panel-surface p-3 text-white shadow-2xl sm:left-auto sm:right-5 sm:max-w-md"
             role="status"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-wellness-sage-500 text-white">
@@ -145,7 +145,7 @@ export const ScheduleCompanion: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full border border-wellness-sage-400/40 bg-[#211D32] text-sm font-bold text-white shadow-2xl transition hover:bg-[#2A2540] sm:bottom-6 sm:right-6 sm:h-auto sm:w-auto sm:min-h-12 sm:justify-start sm:gap-2 sm:px-4"
+        className="fixed bottom-4 right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full border border-wellness-sage-400/40 bg-panel-surface text-sm font-bold text-white shadow-2xl transition hover:bg-panel-alt sm:bottom-6 sm:right-6 sm:h-auto sm:w-auto sm:min-h-12 sm:justify-start sm:gap-2 sm:px-4"
         aria-label="Open my timetable"
       >
         <CalendarDays className="h-5 w-5 text-wellness-sage-300" />
@@ -158,7 +158,7 @@ export const ScheduleCompanion: React.FC = () => {
       <AnimatePresence>
         {isOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-5" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsOpen(false); }}>
-            <motion.section initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }} className="max-h-[92dvh] w-full max-w-6xl overflow-y-auto rounded-t-3xl border border-[#3A3453] bg-[#191624] p-4 text-white shadow-2xl sm:rounded-3xl sm:p-6" role="dialog" aria-modal="true" aria-label="My saved timetable">
+            <motion.section initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }} className="max-h-[92dvh] w-full max-w-6xl overflow-y-auto rounded-t-3xl border border-panel-border bg-panel-surface p-4 text-white shadow-2xl sm:rounded-3xl sm:p-6" role="dialog" aria-modal="true" aria-label="My saved timetable">
               <header className="mb-5 flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-wellness-sage-300">Always available</p>
@@ -190,7 +190,7 @@ export const ScheduleCompanion: React.FC = () => {
                       <span className="hidden sm:inline">{isDeleting ? 'Deleting…' : 'Delete'}</span>
                     </button>
                   )}
-                  <button type="button" onClick={() => setIsOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-full border border-[#3A3453] text-white/55 hover:bg-white/5 hover:text-white" aria-label="Close timetable">
+                  <button type="button" onClick={() => setIsOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-full border border-panel-border text-white/55 hover:bg-white/5 hover:text-white" aria-label="Close timetable">
                     <X className="h-5 w-5" />
                   </button>
                 </div>
@@ -199,7 +199,7 @@ export const ScheduleCompanion: React.FC = () => {
               {schedule.length ? (
                 <ScheduleTimetable blocks={schedule} onEditBlock={setEditingBlock} />
               ) : (
-                <div className="rounded-2xl border border-dashed border-[#3A3453] px-5 py-12 text-center">
+                <div className="rounded-2xl border border-dashed border-panel-border px-5 py-12 text-center">
                   <Clock className="mx-auto h-9 w-9 text-white/25" />
                   <p className="mt-3 text-sm font-semibold">No saved timetable yet</p>
                   <p className="mt-1 text-xs text-white/50">{canUndo ? 'Your tasks are safe. Restore the timetable if deleting it was a mistake.' : 'Build one from your open homework and revision items.'}</p>

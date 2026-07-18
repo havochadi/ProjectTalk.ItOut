@@ -7,7 +7,7 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 
 export const Badge: React.FC<BadgeProps> = ({ className, variant = 'default', ...props }) => {
   const variants = {
-    default: 'bg-ti-beige-200 text-ti-ink-900 border border-ti-beige-300',
+    default: 'bg-wellness-sage-100 text-wellness-sage-800 border border-wellness-sage-200',
     positive: 'bg-green-100 text-green-800 border border-green-200',
     neutral: 'bg-blue-100 text-blue-800 border border-blue-200',
     negative: 'bg-red-100 text-red-800 border border-red-200',
@@ -18,7 +18,7 @@ export const Badge: React.FC<BadgeProps> = ({ className, variant = 'default', ..
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold shadow-sm',
+        'inline-flex items-center rounded-full px-3 py-1 text-xs font-bold font-display shadow-sm',
         variants[variant],
         className
       )}

@@ -9,11 +9,11 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading, children, disabled, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center rounded-full font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none hover:scale-[1.03] hover:shadow-md active:scale-[0.97]';
+    const baseStyles = 'inline-flex items-center justify-center rounded-full font-bold font-display tracking-tight transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none hover:scale-[1.04] hover:shadow-glow active:scale-[0.96]';
 
     const variants = {
-      primary: 'bg-[#13111C] text-white hover:bg-[var(--primary-dark)] focus-visible:ring-[var(--primary)]',
-      secondary: 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-alt)]',
+      primary: 'bg-gradient-sunset text-white hover:brightness-110 hover:saturate-110 focus-visible:ring-[var(--primary)]',
+      secondary: 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-alt)] hover:border-[var(--primary)]',
       ghost: 'text-[var(--text)] hover:bg-[var(--surface-alt)]',
       danger: 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 focus-visible:ring-red-500',
     };

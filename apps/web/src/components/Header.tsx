@@ -42,13 +42,13 @@ export const Header: React.FC = () => {
     <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur-xl shadow-card">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
         {/* Logo */}
-        <Link to="/" className="group flex items-center gap-2.5 text-lg font-bold tracking-tight text-text">
+        <Link to="/" className="group flex items-center gap-2.5 text-lg font-bold font-display tracking-tight text-text">
           <img
             src={`${import.meta.env.BASE_URL}TIO.png`}
             alt="TIO logo"
-            className="h-8 w-8 shrink-0 object-contain transition-transform duration-300 group-hover:scale-105"
+            className="h-9 w-9 shrink-0 rounded-2xl object-contain shadow-glow transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3"
           />
-          <span className="hidden text-sm font-bold text-text sm:inline">Talk.ItOut</span>
+          <span className="hidden bg-gradient-sunset bg-clip-text text-sm font-extrabold text-transparent sm:inline">Talk.ItOut</span>
         </Link>
 
         {/* Desktop Nav */}
@@ -61,9 +61,9 @@ export const Header: React.FC = () => {
               <motion.div key={item.to} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
                 <Link
                   to={item.to}
-                  className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition-all duration-200 ${
                     active
-                      ? 'bg-wellness-sage-100 text-wellness-sage-700 border border-wellness-sage-200'
+                      ? 'bg-gradient-sunset text-white shadow-glow'
                       : 'text-muted hover:bg-wellness-sage-50 hover:text-wellness-sage-600'
                   }`}
                 >
@@ -131,9 +131,9 @@ export const Header: React.FC = () => {
                     key={item.to}
                     to={item.to}
                     onClick={() => setMobileOpen(false)}
-                    className={`flex min-h-11 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                    className={`flex min-h-11 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
                       active
-                        ? 'bg-wellness-sage-100 text-wellness-sage-700 border border-wellness-sage-200'
+                        ? 'bg-gradient-sunset text-white shadow-glow'
                         : 'text-muted hover:bg-wellness-sage-50 hover:text-wellness-sage-600'
                     }`}
                   >

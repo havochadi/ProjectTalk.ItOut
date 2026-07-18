@@ -22,7 +22,7 @@ const inputClass =
   'w-full bg-surface text-text border border-border rounded-xl px-4 py-2.5 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-wellness-sage-400 focus:border-wellness-sage-400 transition';
 
 const btnPrimary =
-  'inline-flex items-center justify-center rounded-full bg-[#13111C] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-wellness-sage-700 focus-visible:ring-2 focus-visible:ring-wellness-sage-400';
+  'inline-flex items-center justify-center rounded-full bg-gradient-sunset px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 hover:saturate-110 focus-visible:ring-2 focus-visible:ring-wellness-sage-400';
 
 const btnSecondary =
   'inline-flex items-center justify-center rounded-full border border-border bg-surface px-5 py-2.5 text-sm font-semibold text-text transition hover:bg-surface-alt focus-visible:ring-2 focus-visible:ring-wellness-sage-400';

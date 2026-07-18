@@ -120,7 +120,7 @@ export const RegisterPage: React.FC = () => {
 
             <Button
               type="submit"
-              className="w-full rounded-full bg-[#13111C] py-3 font-semibold text-white hover:bg-wellness-sage-700 transition-all"
+              className="w-full rounded-full bg-gradient-sunset py-3 font-semibold text-white hover:brightness-110 hover:saturate-110 transition-all"
               isLoading={isLoading}
             >
               Create account

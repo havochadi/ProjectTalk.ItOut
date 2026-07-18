@@ -47,10 +47,10 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen flex gradient-wellness">
       {/* Left panel — brand & warmth */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center px-16 bg-[#13111C] relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center px-16 bg-panel-bg relative overflow-hidden">
         {/* Background blobs */}
         <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-wellness-sage-600/25 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-[#E86FA0]/15 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-[var(--accent-pink)]/15 blur-3xl" />
 
         <div className="relative z-10 text-center text-white">
           <motion.div
@@ -136,7 +136,7 @@ export const LoginPage: React.FC = () => {
 
               <Button
                 type="submit"
-                className="w-full rounded-full bg-[#13111C] py-3 font-semibold text-white hover:bg-wellness-sage-700 transition-all"
+                className="w-full rounded-full bg-gradient-sunset py-3 font-semibold text-white hover:brightness-110 hover:saturate-110 transition-all"
                 isLoading={isLoading}
               >
                 Sign in

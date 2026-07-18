@@ -13,9 +13,9 @@ interface StudySuggestion {
 }
 
 const columns = [
-  { status: 'todo',  label: 'To Do',  color: 'bg-[#211D32]', ring: 'border-[#3A3453]', dot: 'bg-wellness-sage-400' },
-  { status: 'doing', label: 'Doing',  color: 'bg-[#172430]', ring: 'border-[#29465A]', dot: 'bg-wellness-sky-400' },
-  { status: 'done',  label: 'Done',   color: 'bg-[#201B2C]', ring: 'border-[#3F3655]', dot: 'bg-wellness-lavender-400' },
+  { status: 'todo',  label: 'To Do',  color: 'bg-panel-surface', ring: 'border-panel-border', dot: 'bg-wellness-sage-400' },
+  { status: 'doing', label: 'Doing',  color: 'bg-[#12283A]', ring: 'border-[#1F5C82]', dot: 'bg-wellness-sky-400' },
+  { status: 'done',  label: 'Done',   color: 'bg-[#332012]', ring: 'border-[#8A5222]', dot: 'bg-wellness-lavender-400' },
 ];
 
 const priorityStyle: Record<string, string> = {
@@ -197,7 +197,7 @@ export const TasksPage: React.FC = () => {
         </motion.button>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-[#3A3453] bg-[#211D32] px-4 py-3 text-white shadow-card sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 rounded-2xl border border-panel-border bg-panel-surface px-4 py-3 text-white shadow-card sm:flex-row sm:items-center">
         <div className="shrink-0">
           <p className="text-xs font-bold uppercase tracking-wide text-white/45">Your progress</p>
           <p className="mt-0.5 text-sm font-semibold">
@@ -236,7 +236,7 @@ export const TasksPage: React.FC = () => {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     whileHover={{ y: -2 }}
-                    className="rounded-xl border border-white/10 bg-[#13111C] p-4 shadow-card transition-shadow hover:border-white/20 hover:shadow-card-hover"
+                    className="rounded-xl border border-white/10 bg-panel-bg p-4 shadow-card transition-shadow hover:border-white/20 hover:shadow-card-hover"
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <p className="text-sm font-semibold leading-snug text-white">{task.title}</p>
@@ -278,7 +278,7 @@ export const TasksPage: React.FC = () => {
                       <select
                         value={task.status}
                         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleStatusChange(task, e.target.value)}
-                        className="rounded-lg border border-white/10 bg-[#211D32] px-2 py-1 text-xs text-white focus:outline-none"
+                        className="rounded-lg border border-white/10 bg-panel-surface px-2 py-1 text-xs text-white focus:outline-none"
                       >
                         <option value="todo">To Do</option>
                         <option value="doing">Doing</option>

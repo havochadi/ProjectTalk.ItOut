@@ -226,7 +226,7 @@ export const ChatPage: React.FC = () => {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 space-y-3 overflow-y-auto bg-[radial-gradient(ellipse_at_top_left,rgba(61,139,122,0.04),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(123,111,173,0.04),transparent_60%)] px-3 py-4 sm:px-6 sm:py-5">
+          <div className="flex-1 space-y-3 overflow-y-auto bg-[radial-gradient(ellipse_at_top_left,rgba(124,58,237,0.04),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(123,111,173,0.04),transparent_60%)] px-3 py-4 sm:px-6 sm:py-5">
 
             {/* Mood selector */}
             {showMoodSelector && (

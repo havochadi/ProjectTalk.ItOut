@@ -77,7 +77,7 @@ export const ScheduleBlockEditor: React.FC<Props> = ({ block, onClose, onChanged
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
       <section
-        className="w-full max-w-lg rounded-t-3xl border border-[#3A3453] bg-[#191624] p-5 text-white shadow-2xl sm:rounded-3xl sm:p-6"
+        className="w-full max-w-lg rounded-t-3xl border border-panel-border bg-panel-surface p-5 text-white shadow-2xl sm:rounded-3xl sm:p-6"
         role="dialog"
         aria-modal="true"
         aria-labelledby="schedule-editor-title"
@@ -88,7 +88,7 @@ export const ScheduleBlockEditor: React.FC<Props> = ({ block, onClose, onChanged
             <h2 id="schedule-editor-title" className="mt-1 break-words text-xl font-bold">{block.title}</h2>
             <p className="mt-1 text-xs text-white/50">Changes apply only to this timetable block.</p>
           </div>
-          <button type="button" onClick={onClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#3A3453] text-white/55 hover:bg-white/5 hover:text-white" aria-label="Close session editor">
+          <button type="button" onClick={onClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-panel-border text-white/55 hover:bg-white/5 hover:text-white" aria-label="Close session editor">
             <X className="h-5 w-5" />
           </button>
         </header>
@@ -96,23 +96,23 @@ export const ScheduleBlockEditor: React.FC<Props> = ({ block, onClose, onChanged
         <div className="mt-5 space-y-4">
           <label className="block text-xs font-bold text-white/75">
             <span className="mb-1.5 flex items-center gap-1.5"><CalendarDays className="h-4 w-4" /> Day</span>
-            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="min-h-12 w-full rounded-xl border border-[#3A3453] bg-[#13111C] px-3 text-sm text-white [color-scheme:dark] focus:border-wellness-sage-400 focus:outline-none" />
+            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="min-h-12 w-full rounded-xl border border-panel-border bg-panel-bg px-3 text-sm text-white [color-scheme:dark] focus:border-wellness-sage-400 focus:outline-none" />
           </label>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs font-bold text-white/75">
               <span className="mb-1.5 flex items-center gap-1.5"><Clock3 className="h-4 w-4" /> Starts</span>
-              <input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} className="min-h-12 w-full rounded-xl border border-[#3A3453] bg-[#13111C] px-3 text-sm text-white [color-scheme:dark] focus:border-wellness-sage-400 focus:outline-none" />
+              <input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} className="min-h-12 w-full rounded-xl border border-panel-border bg-panel-bg px-3 text-sm text-white [color-scheme:dark] focus:border-wellness-sage-400 focus:outline-none" />
             </label>
             <label className="block text-xs font-bold text-white/75">
               <span className="mb-1.5 block">Ends</span>
-              <input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} className="min-h-12 w-full rounded-xl border border-[#3A3453] bg-[#13111C] px-3 text-sm text-white [color-scheme:dark] focus:border-wellness-sage-400 focus:outline-none" />
+              <input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} className="min-h-12 w-full rounded-xl border border-panel-border bg-panel-bg px-3 text-sm text-white [color-scheme:dark] focus:border-wellness-sage-400 focus:outline-none" />
             </label>
           </div>
 
           <label className="block text-xs font-bold text-white/75">
             <span className="mb-1.5 block">Progress</span>
-            <select value={status} onChange={(event) => setStatus(event.target.value as 'todo' | 'doing' | 'done')} className="min-h-12 w-full rounded-xl border border-[#3A3453] bg-[#13111C] px-3 text-sm text-white focus:border-wellness-sage-400 focus:outline-none">
+            <select value={status} onChange={(event) => setStatus(event.target.value as 'todo' | 'doing' | 'done')} className="min-h-12 w-full rounded-xl border border-panel-border bg-panel-bg px-3 text-sm text-white focus:border-wellness-sage-400 focus:outline-none">
               <option value="todo">To Do</option>
               <option value="doing">Doing</option>
               <option value="done">Done</option>
@@ -120,7 +120,7 @@ export const ScheduleBlockEditor: React.FC<Props> = ({ block, onClose, onChanged
           </label>
         </div>
 
-        <p className="mt-4 rounded-xl border border-[#3A3453] bg-[#211D32] px-3 py-2.5 text-xs leading-relaxed text-white/55">
+        <p className="mt-4 rounded-xl border border-panel-border bg-panel-surface px-3 py-2.5 text-xs leading-relaxed text-white/55">
           To rename the task everywhere, edit its card in the To-Do list. Removing this session will not delete that task.
         </p>
 

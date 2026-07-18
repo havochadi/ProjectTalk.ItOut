@@ -2,45 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Mindline-inspired Palette ──────────────────────────────────────── */
+/* ─── Vibrant & Playful Palette ──────────────────────────────────────── */
 :root {
   /* Core backgrounds */
-  --bg: #F4F4F7;
+  --bg: #FAF7FF;
   --surface: #FFFFFF;
-  --surface-alt: #EFEFF6;
+  --surface-alt: #F3EEFF;
 
   /* Typography */
-  --text: #1A1A2E;
-  --muted: #6B6B84;
+  --text: #1E1533;
+  --muted: #6B6584;
 
   /* Brand — violet/purple */
-  --primary: #7B6CF6;
-  --primary-light: #A89EFB;
-  --primary-dark: #5A48E8;
+  --primary: #7C3AED;
+  --primary-light: #A78BFA;
+  --primary-dark: #6024D2;
+
+  /* Hot accent — magenta/pink */
+  --accent-pink: #EC4899;
+  --accent-pink-light: #F9A8D4;
+  --accent-pink-pale: #FDF0F7;
+
+  /* Energy accent — sunset orange/coral */
+  --accent-orange: #FB923C;
+  --accent-orange-light: #FDBA74;
+  --accent-orange-pale: #FFF4EB;
 
   /* Accent */
-  --lavender: #B06FAD;
-  --lavender-light: #D49DD4;
-  --lavender-pale: #F5EDF8;
+  --lavender: #A78BFA;
+  --lavender-light: #D6C8FE;
+  --lavender-pale: #F5EFFF;
 
-  --peach: #F09B6A;
-  --peach-light: #FAD5BC;
-  --peach-pale: #FEF3EB;
+  --peach: #FB923C;
+  --peach-light: #FDBA74;
+  --peach-pale: #FFF4EB;
 
-  --sage: #9B8AFC;
-  --sage-light: #C4BAFD;
-  --sage-pale: #F0EEFF;
+  --sage: #7C3AED;
+  --sage-light: #C4B0FE;
+  --sage-pale: #F1EBFF;
 
-  --sky: #6BA3C4;
-  --sky-pale: #E5F1F8;
+  --sky: #38BDF8;
+  --sky-pale: #E4F6FF;
+
+  /* Scheduler module — intentionally-dark panel UI */
+  --panel-dark-bg: #1B1330;
+  --panel-dark-surface: #241A3D;
+  --panel-dark-surface-alt: #2E2350;
+  --panel-dark-border: #4A3D73;
+
+  /* Signature gradient */
+  --gradient-sunset: linear-gradient(135deg, #7C3AED 0%, #EC4899 55%, #FB923C 100%);
 
   /* Borders & Shadows */
-  --border: #E2E0F0;
-  --border-dark: #B8B4D8;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
-  --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.06);
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.05);
+  --border: #E7DFFB;
+  --border-dark: #C9B8F3;
+  --radius-xl: 1.15rem;
+  --radius-2xl: 1.75rem;
+  --shadow-soft: 0 8px 32px rgba(124, 58, 237, 0.08);
+  --shadow-card: 0 2px 14px rgba(124, 58, 237, 0.07);
 
   /* Status */
   --success: #22C55E;
@@ -49,13 +68,18 @@
 }
 
 :root.dark {
-  --bg: #13111C;
-  --surface: #1E1B2E;
-  --surface-alt: #252238;
-  --text: #EAE8FF;
-  --muted: #9B99B8;
-  --border: #2E2B48;
-  --border-dark: #3D3A60;
+  --bg: #150F26;
+  --surface: #211A38;
+  --surface-alt: #2A2245;
+  --text: #F1ECFF;
+  --muted: #ABA3C9;
+  --border: #382C5C;
+  --border-dark: #4A3D73;
+
+  --panel-dark-bg: #120C22;
+  --panel-dark-surface: #1B1330;
+  --panel-dark-surface-alt: #241A3D;
+  --panel-dark-border: #4A3D73;
 }
 
 *,
@@ -72,11 +96,15 @@ body,
 
 body {
   margin: 0;
-  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Nunito', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Space Grotesk', 'Nunito', system-ui, sans-serif;
 }
 
 .app-shell {
@@ -118,27 +146,27 @@ body {
 }
 
 .btn-primary {
-  background: #13111C;
+  background: var(--gradient-sunset);
   color: #fff;
   border-radius: 999px;
   padding: 0.6rem 1.5rem;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.9rem;
-  transition: background 200ms ease, transform 100ms ease;
+  transition: filter 200ms ease, transform 100ms ease;
 }
 
 .btn-primary:hover {
-  background: var(--primary-dark);
+  filter: brightness(1.08) saturate(1.1);
 }
 
 .gradient-wellness {
-  background: #F4F4F7;
+  background: var(--bg);
 }
 
 .gradient-hero {
-  background: radial-gradient(ellipse at 20% 20%, rgba(123, 108, 246, 0.10), transparent 55%),
-              radial-gradient(ellipse at 80% 10%, rgba(176, 111, 173, 0.07), transparent 50%),
-              radial-gradient(ellipse at 60% 90%, rgba(107, 163, 196, 0.06), transparent 45%);
+  background: radial-gradient(ellipse at 20% 20%, rgba(124, 58, 237, 0.14), transparent 55%),
+              radial-gradient(ellipse at 80% 10%, rgba(236, 72, 153, 0.10), transparent 50%),
+              radial-gradient(ellipse at 60% 90%, rgba(251, 146, 60, 0.08), transparent 45%);
 }
 
 @media (prefers-reduced-motion: reduce) {

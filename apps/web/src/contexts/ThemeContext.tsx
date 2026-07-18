@@ -17,7 +17,7 @@ type ThemeContextValue = {
 
 const ACCENT_STORAGE_KEY = 'talkio-accent-color';
 const DARK_STORAGE_KEY = 'talkio-dark-mode';
-const DEFAULT_ACCENT = '#d4c4a8';
+const DEFAULT_ACCENT = '#7C3AED';
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 

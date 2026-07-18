@@ -13,7 +13,7 @@ export function AvatarCanvas({
 }: AvatarCanvasProps) {
   return (
     <div
-      className={`relative flex h-full min-h-[420px] w-full items-center justify-center overflow-hidden rounded-[3rem] bg-[#201b32] ${className}`.trim()}
+      className={`relative flex h-full min-h-[420px] w-full items-center justify-center overflow-hidden rounded-[3rem] bg-panel-surface ${className}`.trim()}
       style={style}
       aria-label="Talk.IO companion avatar"
     >
@@ -41,7 +41,7 @@ export function AvatarCanvas({
           position: absolute;
           inset: 12%;
           border-radius: 999px;
-          background: rgba(124, 103, 255, 0.28);
+          background: rgba(124, 58, 237, 0.28);
           filter: blur(42px);
           animation: talkio-pulse 3.4s ease-in-out infinite;
         }

@@ -5,10 +5,10 @@ import { Check, Ear, Eye, Flower2, Hand, Pause, Play, RotateCcw, Utensils, X } f
 type Exercise = 'breathing' | 'grounding';
 
 const breathingPhases = [
-  { label: 'Breathe in', hint: 'Slowly through your nose', scale: 1.45, color: '#7B6CF6' },
-  { label: 'Hold', hint: 'Stay relaxed', scale: 1.45, color: '#6BA3C4' },
-  { label: 'Breathe out', hint: 'Slowly through your mouth', scale: 1, color: '#9B8ECE' },
-  { label: 'Hold', hint: 'Rest before the next breath', scale: 1, color: '#6D9D93' },
+  { label: 'Breathe in', hint: 'Slowly through your nose', scale: 1.45, color: '#7C3AED' },
+  { label: 'Hold', hint: 'Stay relaxed', scale: 1.45, color: '#38BDF8' },
+  { label: 'Breathe out', hint: 'Slowly through your mouth', scale: 1, color: '#A78BFA' },
+  { label: 'Hold', hint: 'Rest before the next breath', scale: 1, color: '#10B981' },
 ];
 
 const groundingSteps = [
@@ -184,7 +184,7 @@ const GroundingGuide: React.FC = () => {
           type="button"
           onClick={continueToNext}
           disabled={currentEntries.length < step.count}
-          className="min-h-12 w-full rounded-xl bg-[#13111C] px-6 text-sm font-bold text-white hover:bg-wellness-sage-800 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+          className="min-h-12 w-full rounded-xl bg-gradient-sunset px-6 text-sm font-bold text-white hover:brightness-110 hover:saturate-110 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
         >
           {stepIndex === groundingSteps.length - 1 ? 'Finish grounding' : 'Continue'}
         </button>

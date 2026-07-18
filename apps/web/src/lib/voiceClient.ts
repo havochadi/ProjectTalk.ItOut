@@ -9,6 +9,83 @@ let voiceConfig = {
 // Active audio elements
 let currentAudio: HTMLAudioElement | null = null;
 
+// Web Audio API graph for real-time amplitude analysis (drives avatar talk animation).
+// A fresh MediaElementSourceNode is required per <audio> element, so this is rebuilt
+// each time `speak()` creates a new one.
+let audioContext: AudioContext | null = null;
+let analyserNode: AnalyserNode | null = null;
+let sourceNode: MediaElementAudioSourceNode | null = null;
+
+function connectAmplitudeAnalyser(audioEl: HTMLAudioElement): void {
+  if (typeof window === 'undefined') return;
+  const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+  if (!AudioContextCtor) return;
+
+  try {
+    if (!audioContext) audioContext = new AudioContextCtor();
+    if (audioContext.state === 'suspended') void audioContext.resume();
+
+    sourceNode?.disconnect();
+    analyserNode?.disconnect();
+
+    sourceNode = audioContext.createMediaElementSource(audioEl);
+    analyserNode = audioContext.createAnalyser();
+    analyserNode.fftSize = 256;
+    analyserNode.smoothingTimeConstant = 0.7;
+    sourceNode.connect(analyserNode);
+    analyserNode.connect(audioContext.destination);
+  } catch {
+    // Some browsers only allow one MediaElementSource per element; if this fails,
+    // playback still works, it just won't drive amplitude-based animation.
+    analyserNode = null;
+  }
+}
+
+function disconnectAmplitudeAnalyser(): void {
+  sourceNode?.disconnect();
+  analyserNode?.disconnect();
+  sourceNode = null;
+  analyserNode = null;
+}
+
+let amplitudeSubscribers: Array<(level: number) => void> = [];
+let amplitudeRafId: number | null = null;
+const amplitudeDataBuffer: { data: Uint8Array<ArrayBuffer> | null } = { data: null };
+
+function amplitudeLoop() {
+  let level = 0;
+  if (analyserNode) {
+    if (!amplitudeDataBuffer.data || amplitudeDataBuffer.data.length !== analyserNode.frequencyBinCount) {
+      amplitudeDataBuffer.data = new Uint8Array(new ArrayBuffer(analyserNode.frequencyBinCount));
+    }
+    analyserNode.getByteFrequencyData(amplitudeDataBuffer.data);
+    const avg = amplitudeDataBuffer.data.reduce((sum, v) => sum + v, 0) / amplitudeDataBuffer.data.length;
+    level = Math.min(1, avg / 140);
+  }
+  amplitudeSubscribers.forEach((cb) => cb(level));
+  amplitudeRafId = requestAnimationFrame(amplitudeLoop);
+}
+
+/**
+ * Subscribe to a real-time 0–1 amplitude level of whatever audio `speak()` is currently
+ * playing. Only reflects the ElevenLabs playback path — browser `speechSynthesis` audio
+ * (see `speakWithBrowser`) can't be tapped by the Web Audio API, so this reports 0 during it.
+ * Returns an unsubscribe function.
+ */
+export function subscribeToSpeechAmplitude(cb: (level: number) => void): () => void {
+  if (amplitudeSubscribers.length === 0 && amplitudeRafId === null) {
+    amplitudeRafId = requestAnimationFrame(amplitudeLoop);
+  }
+  amplitudeSubscribers.push(cb);
+  return () => {
+    amplitudeSubscribers = amplitudeSubscribers.filter((fn) => fn !== cb);
+    if (amplitudeSubscribers.length === 0 && amplitudeRafId !== null) {
+      cancelAnimationFrame(amplitudeRafId);
+      amplitudeRafId = null;
+    }
+  };
+}
+
 // Web Speech API recognition
 let recognition: any = null;
 let isRecognitionActive = false;
@@ -70,6 +147,7 @@ export async function speak(text: string, voiceId?: string): Promise<void> {
     const audioUrl = URL.createObjectURL(audioBlob);
 
     currentAudio = new Audio(audioUrl);
+    connectAmplitudeAnalyser(currentAudio);
 
     // Clean up URL after audio loads
     currentAudio.addEventListener('loadeddata', () => {
@@ -85,11 +163,13 @@ export async function speak(text: string, voiceId?: string): Promise<void> {
 
       currentAudio.addEventListener('ended', () => {
         currentAudio = null;
+        disconnectAmplitudeAnalyser();
         resolve();
       });
 
       currentAudio.addEventListener('error', (error) => {
         currentAudio = null;
+        disconnectAmplitudeAnalyser();
         reject(error);
       });
 
@@ -110,6 +190,7 @@ function stopSpeaking(): void {
     currentAudio.currentTime = 0;
     currentAudio = null;
   }
+  disconnectAmplitudeAnalyser();
 }
 
 /**

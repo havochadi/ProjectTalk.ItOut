@@ -10,6 +10,7 @@ import { Card } from '../components/Card';
 import { Toggle } from '../components/Toggle';
 import { Slider } from '../components/Slider';
 import { SectionHeader } from '../components/SectionHeader';
+import { VoicePicker } from '../components/VoicePicker';
 
 interface PomodoroSettings {
   focusDuration: number;
@@ -17,9 +18,6 @@ interface PomodoroSettings {
   longBreakDuration: number;
   cyclesBeforeLongBreak: number;
 }
-
-const inputClass =
-  'w-full bg-surface text-text border border-border rounded-xl px-4 py-2.5 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-wellness-sage-400 focus:border-wellness-sage-400 transition';
 
 const btnPrimary =
   'inline-flex items-center justify-center rounded-full bg-gradient-sunset px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 hover:saturate-110 focus-visible:ring-2 focus-visible:ring-wellness-sage-400';
@@ -113,13 +111,15 @@ export const SettingsPage: React.FC = () => {
               label="" disabled={!voiceEnabled} />
           </div>
         </div>
-        <div>
-          <label className="space-y-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted">Voice ID</span>
-            <input className={inputClass} value={voicePrefs.voiceId}
-              onChange={(e) => setVoicePrefs((p) => ({ ...p, voiceId: e.target.value }))} placeholder="Rachel" />
-          </label>
-        </div>
+        {voiceEnabled && (
+          <div className="space-y-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">Voice</span>
+            <VoicePicker
+              value={voicePrefs.voiceId}
+              onChange={(voiceId) => setVoicePrefs((p) => ({ ...p, voiceId }))}
+            />
+          </div>
+        )}
         <button type="button" onClick={handleUpdateVoiceSettings} className={btnPrimary} disabled={!voiceEnabled}>
           Save voice settings
         </button>

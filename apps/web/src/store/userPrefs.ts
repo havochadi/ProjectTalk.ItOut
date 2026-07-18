@@ -2,15 +2,18 @@
  * User Preferences Store
  * Simple localStorage-based state management for user preferences
  */
+import { DEFAULT_CHARACTER_ID } from '../components/avatar/characters';
 
 export interface UserPreferences {
   autoPlayVoice: boolean;
   voiceId: string;
+  characterId: string;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   autoPlayVoice: false,
   voiceId: 'Rachel',
+  characterId: DEFAULT_CHARACTER_ID,
 };
 
 const STORAGE_KEY = 'talkitout_user_prefs';

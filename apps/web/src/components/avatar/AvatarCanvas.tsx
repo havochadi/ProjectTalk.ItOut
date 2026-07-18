@@ -1,16 +1,56 @@
 import type { CSSProperties } from 'react'
+import { lazy, Suspense } from 'react'
+import { getCharacter, DEFAULT_CHARACTER_ID } from './characters'
 
 interface AvatarCanvasProps {
   className?: string
   isSpeaking?: boolean
+  characterId?: string
   style?: CSSProperties
+}
+
+const Avatar3DLazy = lazy(() => import('./Avatar3D'))
+
+function detectWebGL(): boolean {
+  if (typeof document === 'undefined') return false
+  try {
+    const canvas = document.createElement('canvas')
+    return Boolean(
+      canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    )
+  } catch {
+    return false
+  }
+}
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || !window.matchMedia) return false
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+// Computed once: neither WebGL support nor a reduced-motion preference change during a session.
+const supports3DAvatar = detectWebGL() && !prefersReducedMotion()
+
+function StaticAvatar({ isSpeaking }: { isSpeaking: boolean }) {
+  return (
+    <div className={isSpeaking ? 'talkio-avatar talkio-avatar-speaking' : 'talkio-avatar'}>
+      <img
+        src={`${import.meta.env.BASE_URL}TIO.png`}
+        alt="TIO animated avatar"
+        className="h-full w-full object-cover"
+      />
+    </div>
+  )
 }
 
 export function AvatarCanvas({
   className = '',
   isSpeaking = false,
+  characterId,
   style,
 }: AvatarCanvasProps) {
+  const character = getCharacter(characterId || DEFAULT_CHARACTER_ID)
+
   return (
     <div
       className={`relative flex h-full min-h-[420px] w-full items-center justify-center overflow-hidden rounded-[3rem] bg-panel-surface ${className}`.trim()}
@@ -18,13 +58,15 @@ export function AvatarCanvas({
       aria-label="Talk.IO companion avatar"
     >
       <div className="absolute inset-0 bg-black" />
-      <div className={isSpeaking ? 'talkio-avatar talkio-avatar-speaking' : 'talkio-avatar'}>
-        <img
-          src={`${import.meta.env.BASE_URL}TIO.png`}
-          alt="TIO animated avatar"
-          className="h-full w-full object-cover"
-        />
-      </div>
+      {supports3DAvatar ? (
+        <Suspense fallback={<StaticAvatar isSpeaking={isSpeaking} />}>
+          <div className="relative z-[1] h-full w-full">
+            <Avatar3DLazy character={character} isSpeaking={isSpeaking} />
+          </div>
+        </Suspense>
+      ) : (
+        <StaticAvatar isSpeaking={isSpeaking} />
+      )}
       <style>{`
         .talkio-avatar {
           position: relative;

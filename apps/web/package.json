@@ -9,6 +9,8 @@
     "lint": "eslint . --ext ts,tsx"
   },
   "dependencies": {
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
     "@supabase/supabase-js": "^2.110.2",
     "@talkitout/ui": "*",
     "framer-motion": "^10.16.16",
@@ -16,7 +18,8 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
-    "react-router-dom": "^6.30.4"
+    "react-router-dom": "^6.30.4",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.45",

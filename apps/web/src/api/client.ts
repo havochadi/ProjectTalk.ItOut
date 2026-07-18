@@ -1164,4 +1164,13 @@ export const voiceAPI = {
     if (error) fail(error);
     return { data };
   },
+
+  async listVoices(): ApiResponse {
+    const { data, error } = await supabase.functions.invoke('voice', {
+      body: { action: 'voices' },
+      headers: { 'x-talkitout-action': 'voices' },
+    });
+    if (error) fail(error);
+    return { data };
+  },
 };

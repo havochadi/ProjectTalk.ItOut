@@ -14,6 +14,21 @@ Deno.serve(async (request) => {
     }
     if (!apiKey) return json({ error: 'ELEVENLABS_API_KEY is not configured' }, 503);
 
+    if (action === 'voices') {
+      const upstream = await fetch('https://api.elevenlabs.io/v1/voices', {
+        headers: { 'xi-api-key': apiKey },
+      });
+      if (!upstream.ok) return json({ error: `ElevenLabs voices failed (${upstream.status})` }, 502);
+      const data = await upstream.json();
+      const voices = (data.voices || []).map((v: any) => ({
+        voice_id: v.voice_id,
+        name: v.name,
+        preview_url: v.preview_url,
+        category: v.category,
+      }));
+      return json({ voices });
+    }
+
     if (action === 'tts') {
       const body = await request.json();
       const text = String(body.text || '').trim();

@@ -6,7 +6,9 @@ import toast from 'react-hot-toast';
 import { Mic, MicOff, Send, VolumeX, Heart, Phone, X, Sparkles } from 'lucide-react';
 import { MessageBubble } from '../components/MessageBubble';
 import { AvatarCanvas } from '../components/avatar/AvatarCanvas';
+import { CHARACTERS } from '../components/avatar/characters';
 import { useAuth } from '../contexts/AuthContext';
+import { getPreference, setPreference } from '../store/userPrefs';
 import {
   initializeVoiceClient, isVoiceEnabled, startBrowserRecognition,
   isBrowserSpeechSupported, speak, stopAllSpeech,
@@ -45,6 +47,7 @@ export const ChatPage: React.FC = () => {
   const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
   const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
+  const [characterId, setCharacterId] = useState(() => getPreference('characterId'));
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -182,12 +185,35 @@ export const ChatPage: React.FC = () => {
     <div className="mx-auto max-w-7xl space-y-4">
       <div className="flex min-w-0 items-stretch gap-5">
         {/* ── Avatar Panel ────────────────────────────────────── */}
-        <div className="relative hidden w-72 shrink-0 xl:block" style={chatPanelStyle}>
-          <AvatarCanvas
-            isSpeaking={isAssistantSpeaking}
-            className="!h-full !min-h-0 rounded-3xl border border-border shadow-card"
-            style={{ minHeight: 0 }}
-          />
+        <div className="hidden w-72 shrink-0 flex-col gap-2 xl:flex" style={chatPanelStyle}>
+          <div className="relative min-h-0 flex-1">
+            <AvatarCanvas
+              isSpeaking={isAssistantSpeaking}
+              characterId={characterId}
+              className="!h-full !min-h-0 rounded-3xl border border-border shadow-card"
+              style={{ minHeight: 0 }}
+            />
+          </div>
+          <div className="flex shrink-0 items-center justify-center gap-2 rounded-2xl border border-border bg-surface px-2 py-2 shadow-card">
+            {CHARACTERS.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => { setCharacterId(c.id); setPreference('characterId', c.id); }}
+                className={`flex h-9 w-9 items-center justify-center rounded-xl border text-xs font-bold uppercase transition ${
+                  characterId === c.id
+                    ? 'border-wellness-sage-400 bg-wellness-sage-50 text-wellness-sage-700'
+                    : 'border-border bg-surface-alt text-muted hover:border-wellness-sage-200 hover:text-wellness-sage-600'
+                }`}
+                style={characterId === c.id ? { borderColor: c.color } : undefined}
+                title={c.name}
+                aria-label={`Switch companion to ${c.name}`}
+                aria-pressed={characterId === c.id}
+              >
+                {c.name.slice(0, 1)}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* ── Chat Area ──────────────────────────────────────── */}

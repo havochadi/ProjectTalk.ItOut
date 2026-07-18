@@ -3,9 +3,10 @@
  *
  * Two kinds of entries are supported:
  * - `procedural`: built from primitive Three.js shapes at runtime — no asset files needed.
- * - `model`: a real rigged glTF/GLB file loaded from `modelPath` (place files under
- *   `apps/web/public/models/`). Add an entry here once a model file exists; Avatar3D
- *   will load it with the same idle/talk animation pipeline used for procedural characters.
+ * - `model`: a real rigged file loaded from `modelPath` (see `apps/web/public/models/`).
+ *   `format` picks the loader: 'fbx' (three's FBXLoader via drei's useFBX) or 'glb'
+ *   (drei's useGLTF). Avatar3D plays the model's first animation clip as idle and layers
+ *   the same talk-amplitude motion used by procedural characters on top.
  */
 export interface CharacterDef {
   id: string;
@@ -15,13 +16,19 @@ export interface CharacterDef {
   color?: string;
   accentColor?: string;
   modelPath?: string;
+  format?: 'fbx' | 'glb';
+  /** Optional fine-tune multiplier applied on top of Avatar3D's auto-fit scale (default 1). */
   scale?: number;
 }
 
+// Cat/Dog/Eagle are real CC0 rigged models ("Animal Pack Vol.2" by Quaternius — see
+// public/models/CREDITS.md). No CC0 rigged fox with animation was found, so Fox stays
+// procedural rather than shipping an unrigged or wrongly-licensed placeholder.
 export const CHARACTERS: CharacterDef[] = [
   { id: 'fox', name: 'Fox', kind: 'procedural', species: 'fox', color: '#e8823a', accentColor: '#fff4e8' },
-  { id: 'cat', name: 'Cat', kind: 'procedural', species: 'cat', color: '#8a8f9c', accentColor: '#f2f3f5' },
-  { id: 'owl', name: 'Owl', kind: 'procedural', species: 'owl', color: '#7b6fad', accentColor: '#e9e6f7' },
+  { id: 'cat', name: 'Cat', kind: 'model', modelPath: 'models/Cat.fbx', format: 'fbx' },
+  { id: 'dog', name: 'Dog', kind: 'model', modelPath: 'models/Dog.fbx', format: 'fbx' },
+  { id: 'eagle', name: 'Eagle', kind: 'model', modelPath: 'models/Eagle.fbx', format: 'fbx' },
 ];
 
 export const DEFAULT_CHARACTER_ID = CHARACTERS[0].id;

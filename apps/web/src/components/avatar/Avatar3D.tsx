@@ -1,9 +1,14 @@
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useEffect, useMemo, useRef } from 'react';
+import type { MutableRefObject, RefObject } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useGLTF, useAnimations } from '@react-three/drei';
+import { useGLTF, useFBX, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 import type { CharacterDef } from './characters';
 import { subscribeToSpeechAmplitude } from '../../lib/voiceClient';
+
+function resolveAssetPath(path: string): string {
+  return `${import.meta.env.BASE_URL}${path}`;
+}
 
 interface Avatar3DProps {
   character: CharacterDef;
@@ -152,36 +157,130 @@ function ProceduralCritter({ character, isSpeaking }: { character: CharacterDef;
   );
 }
 
+// Some quadrupeds (e.g. a cat/dog viewed broadside) are much longer nose-to-tail than they
+// are tall, so normalizing by height alone left them overflowing the panel horizontally in
+// its narrow portrait aspect. Normalizing by the largest of the three dimensions instead
+// keeps every axis within frame regardless of the model's proportions or orientation.
+const MODEL_TARGET_MAX_DIM = 1.6;
+
 /**
- * Loads a real rigged glTF/GLB character (see `characters.ts`). Plays its first animation
- * clip as an idle loop and layers the same talk-amplitude motion used by procedural
- * characters on top — full viseme lip-sync would additionally need the model to expose
- * mouth blendshapes, which isn't assumed here.
+ * Third-party models arrive in whatever units/scale their export tool used (Quaternius's
+ * FBX pack is authored ~100x too large for three.js's meter-scale assumption). Rather than
+ * guess a per-file scale constant, measure the real bounding box once after load and derive
+ * a scale + centering offset so any model — regardless of source units — fits the same
+ * frame the procedural characters use.
  */
-function ModelCritter({ character, isSpeaking }: { character: CharacterDef; isSpeaking: boolean }) {
-  const groupRef = useRef<THREE.Group>(null);
-  const { scene, animations } = useGLTF(character.modelPath as string);
-  const { actions } = useAnimations(animations, groupRef);
-  const amplitudeRef = useAmplitudeRef(isSpeaking);
+function useAutoFit(object: THREE.Object3D) {
+  return useMemo(() => {
+    object.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(object);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = maxDim > 0 ? MODEL_TARGET_MAX_DIM / maxDim : 1;
+    return { scale, center };
+  }, [object]);
+}
+
+/** Shared idle-bob + talk-amplitude motion applied to any loaded model's outer (fitted) group. */
+function useModelMotion(
+  groupRef: RefObject<THREE.Group>,
+  baseScale: number,
+  isSpeaking: boolean,
+  amplitudeRef: MutableRefObject<number>
+) {
   const elapsed = useRef(0);
-
-  useEffect(() => {
-    const firstAction = Object.values(actions)[0];
-    firstAction?.reset().fadeIn(0.3).play();
-    return () => { firstAction?.fadeOut(0.2); };
-  }, [actions]);
-
   useFrame((_, delta) => {
     elapsed.current += delta;
     const idleBob = Math.sin(elapsed.current * 1.6) * 0.04;
     const amp = talkAmplitude(isSpeaking, amplitudeRef.current, elapsed.current);
     if (groupRef.current) {
       groupRef.current.position.y = idleBob + amp * 0.04;
-      groupRef.current.scale.setScalar((character.scale || 1) * (1 + amp * 0.04));
+      groupRef.current.scale.setScalar(baseScale * (1 + amp * 0.04));
     }
   });
+}
 
-  return <primitive ref={groupRef} object={scene} />;
+/**
+ * Picks an "Idle"-named clip as the resting loop and a "Walk"/"Fly"/"Run"-named clip (if any)
+ * as a more energetic talk pose, crossfading between them as `isSpeaking` changes. Falls back
+ * to whichever single clip is available when a model only has one, or none of these names.
+ */
+function useIdleTalkAnimation(actions: Record<string, THREE.AnimationAction | null>, isSpeaking: boolean) {
+  const idleRef = useRef<THREE.AnimationAction | null>(null);
+  const talkRef = useRef<THREE.AnimationAction | null>(null);
+
+  useEffect(() => {
+    const names = Object.keys(actions);
+    const idleName = names.find((n) => /idle/i.test(n)) || names[0];
+    const talkName = names.find((n) => /walk|fly|run|trot/i.test(n));
+    idleRef.current = idleName ? actions[idleName] : null;
+    talkRef.current = talkName ? actions[talkName] : null;
+
+    idleRef.current?.reset().fadeIn(0.3).play();
+    return () => {
+      idleRef.current?.fadeOut(0.2);
+      talkRef.current?.fadeOut(0.2);
+    };
+  }, [actions]);
+
+  useEffect(() => {
+    const idle = idleRef.current;
+    const talk = talkRef.current;
+    if (!talk || talk === idle) return;
+    if (isSpeaking) {
+      talk.reset().fadeIn(0.4).play();
+      idle?.fadeOut(0.4);
+    } else {
+      idle?.reset().fadeIn(0.4).play();
+      talk.fadeOut(0.4);
+    }
+  }, [isSpeaking]);
+}
+
+/**
+ * Loads a real rigged glTF/GLB character (see `characters.ts`). Plays an idle animation
+ * loop (crossfading to a walk/fly clip while speaking, if the model has one) and layers the
+ * same talk-amplitude motion used by procedural characters on top — full viseme lip-sync
+ * would additionally need the model to expose mouth blendshapes, which isn't assumed here.
+ */
+function GltfCritter({ character, isSpeaking }: { character: CharacterDef; isSpeaking: boolean }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const modelRef = useRef<THREE.Group>(null);
+  const { scene, animations } = useGLTF(resolveAssetPath(character.modelPath as string));
+  const { actions } = useAnimations(animations, modelRef);
+  const amplitudeRef = useAmplitudeRef(isSpeaking);
+  const { scale, center } = useAutoFit(scene);
+
+  useIdleTalkAnimation(actions, isSpeaking);
+  useModelMotion(groupRef, scale * (character.scale || 1), isSpeaking, amplitudeRef);
+
+  return (
+    <group ref={groupRef}>
+      <primitive ref={modelRef} object={scene} position={[-center.x, -center.y, -center.z]} />
+    </group>
+  );
+}
+
+/** Same idle/talk pipeline as `GltfCritter`, for FBX-format characters (e.g. the Quaternius animal pack). */
+function FbxCritter({ character, isSpeaking }: { character: CharacterDef; isSpeaking: boolean }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const modelRef = useRef<THREE.Group>(null);
+  const fbx = useFBX(resolveAssetPath(character.modelPath as string));
+  const { actions } = useAnimations(fbx.animations, modelRef);
+  const amplitudeRef = useAmplitudeRef(isSpeaking);
+  const { scale, center } = useAutoFit(fbx);
+
+  useIdleTalkAnimation(actions, isSpeaking);
+  useModelMotion(groupRef, scale * (character.scale || 1), isSpeaking, amplitudeRef);
+
+  return (
+    <group ref={groupRef}>
+      <primitive ref={modelRef} object={fbx} position={[-center.x, -center.y, -center.z]} />
+    </group>
+  );
 }
 
 export function Avatar3D({ character, isSpeaking }: Avatar3DProps) {
@@ -198,7 +297,9 @@ export function Avatar3D({ character, isSpeaking }: Avatar3DProps) {
       <directionalLight position={[0, -2, -3]} intensity={0.3} />
       <Suspense fallback={null}>
         {character.kind === 'model' && character.modelPath
-          ? <ModelCritter character={character} isSpeaking={isSpeaking} />
+          ? (character.format === 'fbx'
+              ? <FbxCritter character={character} isSpeaking={isSpeaking} />
+              : <GltfCritter character={character} isSpeaking={isSpeaking} />)
           : <ProceduralCritter character={character} isSpeaking={isSpeaking} />}
       </Suspense>
     </Canvas>
